@@ -9,13 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { StyledButton } from "@/components/StyledButton";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -23,50 +23,61 @@ export default function LoginScreen() {
   const { signInWithEmail } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [name, setName] = useState("");
 
   const handleAuth = async () => {
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       Alert.alert("Missing fields", "Please enter your email and password.");
+      return;
+    }
+    if (isSignUp && !name.trim()) {
+      Alert.alert("Missing name", "Please enter your full name.");
       return;
     }
     setLoading(true);
     try {
       if (isSignUp) {
-        const { supabase } = await import("@/lib/supabase");
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
-          options: { data: { full_name: name } },
+          options: { data: { full_name: name.trim() } },
         });
         if (error) throw error;
-        Alert.alert("Account Created", "Check your email to confirm your account, then log in.");
+        Alert.alert(
+          "Account Created!",
+          "Check your email to confirm your account, then sign in.",
+          [{ text: "OK", onPress: () => setIsSignUp(false) }]
+        );
       } else {
-        await signInWithEmail(email, password);
+        await signInWithEmail(email.trim(), password);
         router.replace("/(tabs)");
       }
     } catch (err: unknown) {
       const e = err as { message?: string };
-      Alert.alert("Error", e?.message || "Something went wrong.");
+      Alert.alert("Error", e?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const isWeb = Platform.OS === "web";
+  const topPad = isWeb ? 40 : insets.top + 40;
+  const bottomPad = isWeb ? 24 : insets.bottom + 24;
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={[styles.flex, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad, paddingBottom: bottomPad }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.logoArea}>
-          <View style={[styles.logoCircle, { backgroundColor: colors.primary, borderRadius: colors.radius + 4 }]}>
+          <View style={[styles.logoCircle, { backgroundColor: colors.primary, borderRadius: 20 }]}>
             <Text style={styles.logoText}>R</Text>
           </View>
           <Text style={[styles.appName, { color: colors.primary }]}>ResumeAI</Text>
@@ -90,6 +101,7 @@ export default function LoginScreen() {
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
+                returnKeyType="next"
               />
             </View>
           )}
@@ -105,6 +117,7 @@ export default function LoginScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
+              returnKeyType="next"
             />
           </View>
 
@@ -112,12 +125,14 @@ export default function LoginScreen() {
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Password</Text>
             <TextInput
               style={[styles.input, { borderColor: colors.input, color: colors.foreground, backgroundColor: colors.background, borderRadius: colors.radius - 4 }]}
-              placeholder="••••••••"
+              placeholder="Min. 6 characters"
               placeholderTextColor={colors.mutedForeground}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              autoComplete="password"
+              autoComplete={isSignUp ? "new-password" : "current-password"}
+              returnKeyType="done"
+              onSubmitEditing={handleAuth}
             />
           </View>
 
@@ -126,11 +141,11 @@ export default function LoginScreen() {
             onPress={handleAuth}
             loading={loading}
             fullWidth
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 4 }}
           />
         </View>
 
-        <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)} style={styles.toggle}>
+        <TouchableOpacity onPress={() => { setIsSignUp(!isSignUp); setLoading(false); }} style={styles.toggle}>
           <Text style={[styles.toggleText, { color: colors.mutedForeground }]}>
             {isSignUp ? "Already have an account? " : "Don't have an account? "}
             <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>
@@ -144,6 +159,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 24, gap: 24 },
   logoArea: { alignItems: "center", gap: 12 },
   logoCircle: {
@@ -161,5 +177,5 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontFamily: "Inter_500Medium" },
   input: { borderWidth: 1.5, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular" },
   toggle: { alignItems: "center", paddingVertical: 8 },
-  toggleText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  toggleText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
 });
