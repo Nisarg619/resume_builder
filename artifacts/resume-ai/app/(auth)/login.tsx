@@ -35,7 +35,6 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { signUpWithEmail } = await import("@/context/AuthContext").then(m => ({ signUpWithEmail: (await import("@/context/AuthContext")).useAuth }));
         const { supabase } = await import("@/lib/supabase");
         const { error } = await supabase.auth.signUp({
           email,
