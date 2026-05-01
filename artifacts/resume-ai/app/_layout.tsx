@@ -6,7 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router } from "expo-router";
+import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -30,25 +30,33 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const { session, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+  const navState = useRootNavigationState();
 
   useEffect(() => {
-    if (!loading) {
-      if (!session) {
-        router.replace("/(auth)/login");
-      } else {
-        router.replace("/(tabs)");
-      }
+    // Wait for navigator to be ready and auth to resolve
+    if (!navState?.key || loading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!session && !inAuthGroup) {
+      // Not signed in and not on auth screen → go to login
+      router.replace("/(auth)/login");
+    } else if (session && inAuthGroup) {
+      // Signed in but still on auth screen → go to app
+      router.replace("/(tabs)");
     }
-  }, [session, loading]);
+  }, [session, loading, segments, navState?.key]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="resume-builder" options={{ headerShown: false, presentation: "modal" }} />
-      <Stack.Screen name="cover-letter" options={{ headerShown: false, presentation: "modal" }} />
-      <Stack.Screen name="optimizer" options={{ headerShown: false, presentation: "modal" }} />
-      <Stack.Screen name="interview-prep" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="resume-builder" options={{ presentation: "modal" }} />
+      <Stack.Screen name="cover-letter" options={{ presentation: "modal" }} />
+      <Stack.Screen name="optimizer" options={{ presentation: "modal" }} />
+      <Stack.Screen name="interview-prep" options={{ presentation: "modal" }} />
     </Stack>
   );
 }

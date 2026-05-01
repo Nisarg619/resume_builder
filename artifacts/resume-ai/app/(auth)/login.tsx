@@ -10,7 +10,6 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { StyledButton } from "@/components/StyledButton";
@@ -52,7 +51,7 @@ export default function LoginScreen() {
         );
       } else {
         await signInWithEmail(email.trim(), password);
-        router.replace("/(tabs)");
+        // Navigation is handled automatically by RootLayoutNav when session changes
       }
     } catch (err: unknown) {
       const e = err as { message?: string };
