@@ -1,0 +1,175 @@
+Build a complete, production-ready mobile application called "ResumeAI" — an AI-powered Resume & Cover Letter Builder. The app should be built with React Native using Expo, with a Node.js + Express backend. Use MongoDB Atlas (free tier) for the database. All API keys should be stored in environment variables.
+
+---
+
+## TECH STACK
+
+Frontend: React Native (Expo SDK 50+), React Navigation, Axios, React Native Paper UI library
+Backend: Node.js, Express.js, Mongoose (MongoDB Atlas free tier)
+AI: Anthropic Claude API (claude-sonnet-4-20250514 model)
+Payments: Razorpay (Indian payment gateway, supports UPI, cards, net banking)
+Ads: Google AdMob (react-native-google-mobile-ads) — shown to free users only
+Auth: Firebase Authentication (Google Sign-In + Email/Password)
+PDF Generation: react-native-html-to-pdf or expo-print
+File Storage: Firebase Storage (for user profile and resume uploads)
+
+---
+
+## PROJECT STRUCTURE
+
+/frontend (React Native Expo app)
+  /screens — Home, Auth, Dashboard, ResumeBuilder, CoverLetter, Optimizer, Profile, Pricing, Settings
+  /components — ResumeForm, TemplateCard, AdBanner, PremiumModal, LoadingOverlay
+  /navigation — StackNavigator, TabNavigator
+  /context — AuthContext, SubscriptionContext
+  /utils — api.js, pdf.js, storage.js
+
+/backend (Node.js Express)
+  /routes — auth.js, resume.js, coverLetter.js, payment.js, user.js
+  /controllers — for each route
+  /models — User.js, Resume.js, CoverLetter.js, Subscription.js
+  /middleware — authMiddleware.js, subscriptionCheck.js
+  /services — claudeService.js, razorpayService.js
+
+---
+
+## FEATURES TO BUILD
+
+### 1. Authentication
+- Google Sign-In and Email/Password via Firebase Auth
+- JWT token passed to backend for all protected routes
+- Store user profile in MongoDB (name, email, plan, usage count)
+
+### 2. Resume Builder
+- Multi-step form: Personal Info → Work Experience → Education → Skills → Summary
+- Claude API generates a professional summary and bullet points for each job role based on user inputs
+- 4 resume templates (Modern, Classic, Minimal, Creative) rendered as HTML then exported to PDF
+- Free users: 3 resume exports per month
+- Pro users: unlimited exports
+
+### 3. Cover Letter Generator
+- User pastes a job description and their resume data is pre-loaded
+- Claude API generates a tailored, professional cover letter (3 paragraphs)
+- User can edit the generated text before exporting
+- Free users: 3 cover letters per month
+- Pro users: unlimited
+
+### 4. Resume Optimizer (Pro only)
+- User pastes a job description
+- Claude analyzes their resume against the job description
+- Returns: ATS score (0-100), missing keywords, suggested improvements
+- Display results with a progress bar and actionable suggestions list
+
+### 5. LinkedIn Summary Generator (Pro only)
+- Takes resume data as input
+- Claude generates a compelling LinkedIn "About" section (2-3 paragraphs)
+- Copy-to-clipboard button
+
+### 6. Interview Prep (Pro only)
+- User inputs job title and job description
+- Claude generates 10 likely interview questions with ideal answers
+- Displayed as an accordion list
+
+### 7. Subscription & Payments (Razorpay)
+- Two plans:
+  - Pro Monthly: ₹99/month
+  - Pro Yearly: ₹699/year (save 41%)
+- Integrate Razorpay Checkout using react-native-razorpay
+- On successful payment, backend verifies the payment signature using Razorpay secret key, updates user's plan in MongoDB, and sets an expiry date
+- Subscription status checked via backend middleware on protected routes
+
+### 8. Ads (Google AdMob)
+- Show banner ads at the bottom of all screens for free users
+- Show interstitial ads before each PDF export for free users
+- Hide all ads for Pro subscribers
+- Use test ad unit IDs during development
+
+### 9. Usage Tracking
+- Track monthly usage count for free users in MongoDB
+- Reset count on the 1st of each month
+- Show usage remaining (e.g., "2 of 3 resumes used this month") in the dashboard
+- Show upgrade modal when limit is reached
+
+### 10. Dashboard
+- Welcome card with user's name
+- Usage stats: resumes created, cover letters created
+- Quick action buttons: New Resume, New Cover Letter, Optimize Resume
+- Recent documents list with open/delete options
+- Banner showing Pro plan features if user is on free plan
+
+---
+
+## CLAUDE API INTEGRATION (backend/services/claudeService.js)
+
+Use the Anthropic Node.js SDK. Build these specific functions:
+
+generateResumeSummary(userInputs) — prompt Claude to write a professional resume summary in 3-4 sentences.
+
+generateJobBullets(jobTitle, jobDescription, responsibilities) — prompt Claude to rewrite responsibilities into 3-5 strong, ATS-optimized resume bullet points starting with action verbs.
+
+generateCoverLetter(jobTitle, companyName, jobDescription, resumeData) — prompt Claude to write a 3-paragraph tailored cover letter.
+
+optimizeResume(resumeText, jobDescription) — prompt Claude to return a JSON object with: { atsScore: number, missingKeywords: string[], suggestions: string[] }
+
+generateLinkedInSummary(resumeData) — prompt Claude to write a first-person LinkedIn About section.
+
+generateInterviewQuestions(jobTitle, jobDescription) — prompt Claude to return a JSON array of 10 objects: { question: string, idealAnswer: string }
+
+All prompts should be detailed and professional. Parse JSON responses safely with try/catch.
+
+---
+
+## ENVIRONMENT VARIABLES NEEDED
+
+ANTHROPIC_API_KEY=
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+MONGODB_URI=
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_CLIENT_EMAIL=
+JWT_SECRET=
+ADMOB_APP_ID=
+ADMOB_BANNER_UNIT_ID=
+ADMOB_INTERSTITIAL_UNIT_ID=
+
+---
+
+## UI/UX REQUIREMENTS
+
+- Color scheme: Deep blue (#1A237E) primary, white background, orange (#FF6F00) accent
+- Use React Native Paper components throughout for a polished look
+- All screens must have a loading state while Claude API is processing
+- Empty states with helpful illustrations
+- Toast notifications for success/error messages
+- Smooth animations using react-native-reanimated for screen transitions
+- The app should feel premium even on the free plan
+
+---
+
+## MONETIZATION LOGIC SUMMARY
+
+Free plan:
+- 3 resume exports/month
+- 3 cover letters/month
+- AdMob banner + interstitial ads shown
+- No access to Optimizer, LinkedIn Summary, Interview Prep
+
+Pro plan (₹99/month or ₹699/year via Razorpay):
+- Unlimited resume & cover letter exports
+- All Pro features unlocked
+- No ads
+
+---
+
+## IMPORTANT NOTES
+
+- All Claude API calls must happen on the backend only — never expose the API key to the frontend
+- Razorpay payment verification (signature check) must happen on the backend
+- Handle all API errors gracefully with user-friendly messages
+- Add rate limiting on backend routes using express-rate-limit (100 requests/15 min per IP)
+- The app should work on both Android and iOS
+- Include a basic onboarding flow (3-screen swiper) for first-time users
+- Add a "Share your resume" feature — generate a public link to a read-only HTML version of the resume
+
+Start by scaffolding the full project structure, then build the backend first, then the frontend screens in order of user flow. Make all code production-ready with proper error handling.
