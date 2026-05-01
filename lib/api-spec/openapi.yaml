@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,13 +9,24 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: resumes
+    description: Resume management
+  - name: cover-letters
+    description: Cover letter management
+  - name: ai
+    description: AI-powered generation
+  - name: payments
+    description: Payment and subscription management
+  - name: users
+    description: User profile management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +34,427 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/verify:
+    post:
+      operationId: verifyToken
+      tags: [auth]
+      summary: Verify Supabase JWT and upsert user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyTokenBody"
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    patch:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /resumes:
+    get:
+      operationId: listResumes
+      tags: [resumes]
+      summary: List all resumes for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of resumes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resume"
+    post:
+      operationId: createResume
+      tags: [resumes]
+      summary: Create a new resume
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResumeBody"
+      responses:
+        "201":
+          description: Created resume
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+
+  /resumes/{id}:
+    get:
+      operationId: getResume
+      tags: [resumes]
+      summary: Get a resume by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resume
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+    put:
+      operationId: updateResume
+      tags: [resumes]
+      summary: Update a resume
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResumeBody"
+      responses:
+        "200":
+          description: Updated resume
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+    delete:
+      operationId: deleteResume
+      tags: [resumes]
+      summary: Delete a resume
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /cover-letters:
+    get:
+      operationId: listCoverLetters
+      tags: [cover-letters]
+      summary: List all cover letters for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of cover letters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoverLetter"
+    post:
+      operationId: createCoverLetter
+      tags: [cover-letters]
+      summary: Create a new cover letter
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCoverLetterBody"
+      responses:
+        "201":
+          description: Created cover letter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoverLetter"
+
+  /cover-letters/{id}:
+    get:
+      operationId: getCoverLetter
+      tags: [cover-letters]
+      summary: Get a cover letter by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cover letter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoverLetter"
+    put:
+      operationId: updateCoverLetter
+      tags: [cover-letters]
+      summary: Update a cover letter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCoverLetterBody"
+      responses:
+        "200":
+          description: Updated cover letter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoverLetter"
+    delete:
+      operationId: deleteCoverLetter
+      tags: [cover-letters]
+      summary: Delete a cover letter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /ai/resume-summary:
+    post:
+      operationId: generateResumeSummary
+      tags: [ai]
+      summary: Generate a professional resume summary using Claude
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeSummaryBody"
+      responses:
+        "200":
+          description: Generated summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedTextResult"
+
+  /ai/job-bullets:
+    post:
+      operationId: generateJobBullets
+      tags: [ai]
+      summary: Generate ATS-optimized bullet points for a job role
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobBulletsBody"
+      responses:
+        "200":
+          description: Generated bullet points
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedBulletsResult"
+
+  /ai/cover-letter:
+    post:
+      operationId: generateCoverLetterAI
+      tags: [ai]
+      summary: Generate a tailored cover letter using Claude
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoverLetterAIBody"
+      responses:
+        "200":
+          description: Generated cover letter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedTextResult"
+
+  /ai/optimize-resume:
+    post:
+      operationId: optimizeResume
+      tags: [ai]
+      summary: Analyze resume against job description (Pro only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptimizeResumeBody"
+      responses:
+        "200":
+          description: Optimization results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OptimizeResumeResult"
+
+  /ai/linkedin-summary:
+    post:
+      operationId: generateLinkedInSummary
+      tags: [ai]
+      summary: Generate LinkedIn About section (Pro only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinkedInSummaryBody"
+      responses:
+        "200":
+          description: Generated LinkedIn summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedTextResult"
+
+  /ai/interview-questions:
+    post:
+      operationId: generateInterviewQuestions
+      tags: [ai]
+      summary: Generate interview questions and answers (Pro only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewQuestionsBody"
+      responses:
+        "200":
+          description: Generated interview questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewQuestionsResult"
+
+  /payments/create-order:
+    post:
+      operationId: createPaymentOrder
+      tags: [payments]
+      summary: Create a Razorpay order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "200":
+          description: Razorpay order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentOrder"
+
+  /payments/verify:
+    post:
+      operationId: verifyPayment
+      tags: [payments]
+      summary: Verify Razorpay payment and upgrade subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyPaymentBody"
+      responses:
+        "200":
+          description: Subscription updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +464,395 @@ components:
       required:
         - status
 
+    VerifyTokenBody:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        avatarUrl:
+          type: string
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        avatarUrl:
+          type: string
+        plan:
+          type: string
+          enum: [free, pro]
+        usageResumeCount:
+          type: integer
+        usageCoverLetterCount:
+          type: integer
+        subscriptionExpiresAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - email
+        - plan
+        - usageResumeCount
+        - usageCoverLetterCount
+
+    WorkExperience:
+      type: object
+      properties:
+        jobTitle:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        isCurrent:
+          type: boolean
+        responsibilities:
+          type: string
+        bullets:
+          type: array
+          items:
+            type: string
+      required:
+        - jobTitle
+        - company
+        - startDate
+
+    Education:
+      type: object
+      properties:
+        degree:
+          type: string
+        institution:
+          type: string
+        location:
+          type: string
+        graduationYear:
+          type: string
+        gpa:
+          type: string
+      required:
+        - degree
+        - institution
+
+    ResumeData:
+      type: object
+      properties:
+        personalInfo:
+          type: object
+          properties:
+            fullName:
+              type: string
+            email:
+              type: string
+            phone:
+              type: string
+            location:
+              type: string
+            website:
+              type: string
+            linkedin:
+              type: string
+          required:
+            - fullName
+            - email
+        summary:
+          type: string
+        workExperience:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkExperience"
+        education:
+          type: array
+          items:
+            $ref: "#/components/schemas/Education"
+        skills:
+          type: array
+          items:
+            type: string
+        template:
+          type: string
+          enum: [modern, classic, minimal, creative]
+      required:
+        - personalInfo
+
+    Resume:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        data:
+          $ref: "#/components/schemas/ResumeData"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - userId
+        - title
+        - data
+        - createdAt
+        - updatedAt
+
+    CreateResumeBody:
+      type: object
+      properties:
+        title:
+          type: string
+        data:
+          $ref: "#/components/schemas/ResumeData"
+      required:
+        - title
+        - data
+
+    CoverLetter:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        jobTitle:
+          type: string
+        companyName:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - userId
+        - title
+        - content
+        - createdAt
+        - updatedAt
+
+    CreateCoverLetterBody:
+      type: object
+      properties:
+        title:
+          type: string
+        jobTitle:
+          type: string
+        companyName:
+          type: string
+        content:
+          type: string
+      required:
+        - title
+        - content
+
+    UpdateCoverLetterBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+
+    ResumeSummaryBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        jobTitle:
+          type: string
+        yearsExperience:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        highlights:
+          type: string
+      required:
+        - fullName
+        - jobTitle
+
+    JobBulletsBody:
+      type: object
+      properties:
+        jobTitle:
+          type: string
+        company:
+          type: string
+        responsibilities:
+          type: string
+      required:
+        - jobTitle
+        - responsibilities
+
+    CoverLetterAIBody:
+      type: object
+      properties:
+        jobTitle:
+          type: string
+        companyName:
+          type: string
+        jobDescription:
+          type: string
+        resumeData:
+          $ref: "#/components/schemas/ResumeData"
+      required:
+        - jobTitle
+        - companyName
+        - jobDescription
+
+    OptimizeResumeBody:
+      type: object
+      properties:
+        resumeText:
+          type: string
+        jobDescription:
+          type: string
+      required:
+        - resumeText
+        - jobDescription
+
+    LinkedInSummaryBody:
+      type: object
+      properties:
+        resumeData:
+          $ref: "#/components/schemas/ResumeData"
+      required:
+        - resumeData
+
+    InterviewQuestionsBody:
+      type: object
+      properties:
+        jobTitle:
+          type: string
+        jobDescription:
+          type: string
+      required:
+        - jobTitle
+        - jobDescription
+
+    GeneratedTextResult:
+      type: object
+      properties:
+        text:
+          type: string
+      required:
+        - text
+
+    GeneratedBulletsResult:
+      type: object
+      properties:
+        bullets:
+          type: array
+          items:
+            type: string
+      required:
+        - bullets
+
+    OptimizeResumeResult:
+      type: object
+      properties:
+        atsScore:
+          type: integer
+        missingKeywords:
+          type: array
+          items:
+            type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+      required:
+        - atsScore
+        - missingKeywords
+        - suggestions
+
+    InterviewQuestion:
+      type: object
+      properties:
+        question:
+          type: string
+        idealAnswer:
+          type: string
+      required:
+        - question
+        - idealAnswer
+
+    InterviewQuestionsResult:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewQuestion"
+      required:
+        - questions
+
+    CreateOrderBody:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [monthly, yearly]
+      required:
+        - plan
+
+    PaymentOrder:
+      type: object
+      properties:
+        orderId:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        keyId:
+          type: string
+      required:
+        - orderId
+        - amount
+        - currency
+        - keyId
+
+    VerifyPaymentBody:
+      type: object
+      properties:
+        razorpayOrderId:
+          type: string
+        razorpayPaymentId:
+          type: string
+        razorpaySignature:
+          type: string
+        plan:
+          type: string
+          enum: [monthly, yearly]
+      required:
+        - razorpayOrderId
+        - razorpayPaymentId
+        - razorpaySignature
+        - plan

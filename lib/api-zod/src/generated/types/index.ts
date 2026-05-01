@@ -6,4 +6,34 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./coverLetter";
+export * from "./coverLetterAIBody";
+export * from "./createCoverLetterBody";
+export * from "./createOrderBody";
+export * from "./createOrderBodyPlan";
+export * from "./createResumeBody";
+export * from "./education";
+export * from "./generatedBulletsResult";
+export * from "./generatedTextResult";
 export * from "./healthStatus";
+export * from "./interviewQuestion";
+export * from "./interviewQuestionsBody";
+export * from "./interviewQuestionsResult";
+export * from "./jobBulletsBody";
+export * from "./linkedInSummaryBody";
+export * from "./optimizeResumeBody";
+export * from "./optimizeResumeResult";
+export * from "./paymentOrder";
+export * from "./resume";
+export * from "./resumeData";
+export * from "./resumeDataPersonalInfo";
+export * from "./resumeDataTemplate";
+export * from "./resumeSummaryBody";
+export * from "./updateCoverLetterBody";
+export * from "./updateUserBody";
+export * from "./userProfile";
+export * from "./userProfilePlan";
+export * from "./verifyPaymentBody";
+export * from "./verifyPaymentBodyPlan";
+export * from "./verifyTokenBody";
+export * from "./workExperience";

@@ -8,9 +8,583 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
+});
+
+/**
+ * @summary Verify Supabase JWT and upsert user
+ */
+export const VerifyTokenBody = zod.object({
+  token: zod.string(),
+});
+
+export const VerifyTokenResponse = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  name: zod.string().optional(),
+  avatarUrl: zod.string().optional(),
+  plan: zod.enum(["free", "pro"]),
+  usageResumeCount: zod.number(),
+  usageCoverLetterCount: zod.number(),
+  subscriptionExpiresAt: zod.string().nullish(),
+  createdAt: zod.string().optional(),
+});
+
+/**
+ * @summary Get current user profile
+ */
+export const GetMeResponse = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  name: zod.string().optional(),
+  avatarUrl: zod.string().optional(),
+  plan: zod.enum(["free", "pro"]),
+  usageResumeCount: zod.number(),
+  usageCoverLetterCount: zod.number(),
+  subscriptionExpiresAt: zod.string().nullish(),
+  createdAt: zod.string().optional(),
+});
+
+/**
+ * @summary Update current user profile
+ */
+export const UpdateMeBody = zod.object({
+  name: zod.string().optional(),
+  avatarUrl: zod.string().optional(),
+});
+
+export const UpdateMeResponse = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  name: zod.string().optional(),
+  avatarUrl: zod.string().optional(),
+  plan: zod.enum(["free", "pro"]),
+  usageResumeCount: zod.number(),
+  usageCoverLetterCount: zod.number(),
+  subscriptionExpiresAt: zod.string().nullish(),
+  createdAt: zod.string().optional(),
+});
+
+/**
+ * @summary List all resumes for current user
+ */
+export const ListResumesResponseItem = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  title: zod.string(),
+  data: zod.object({
+    personalInfo: zod.object({
+      fullName: zod.string(),
+      email: zod.string(),
+      phone: zod.string().optional(),
+      location: zod.string().optional(),
+      website: zod.string().optional(),
+      linkedin: zod.string().optional(),
+    }),
+    summary: zod.string().optional(),
+    workExperience: zod
+      .array(
+        zod.object({
+          jobTitle: zod.string(),
+          company: zod.string(),
+          location: zod.string().optional(),
+          startDate: zod.string(),
+          endDate: zod.string().optional(),
+          isCurrent: zod.boolean().optional(),
+          responsibilities: zod.string().optional(),
+          bullets: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    education: zod
+      .array(
+        zod.object({
+          degree: zod.string(),
+          institution: zod.string(),
+          location: zod.string().optional(),
+          graduationYear: zod.string().optional(),
+          gpa: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    skills: zod.array(zod.string()).optional(),
+    template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
+  }),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListResumesResponse = zod.array(ListResumesResponseItem);
+
+/**
+ * @summary Create a new resume
+ */
+export const CreateResumeBody = zod.object({
+  title: zod.string(),
+  data: zod.object({
+    personalInfo: zod.object({
+      fullName: zod.string(),
+      email: zod.string(),
+      phone: zod.string().optional(),
+      location: zod.string().optional(),
+      website: zod.string().optional(),
+      linkedin: zod.string().optional(),
+    }),
+    summary: zod.string().optional(),
+    workExperience: zod
+      .array(
+        zod.object({
+          jobTitle: zod.string(),
+          company: zod.string(),
+          location: zod.string().optional(),
+          startDate: zod.string(),
+          endDate: zod.string().optional(),
+          isCurrent: zod.boolean().optional(),
+          responsibilities: zod.string().optional(),
+          bullets: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    education: zod
+      .array(
+        zod.object({
+          degree: zod.string(),
+          institution: zod.string(),
+          location: zod.string().optional(),
+          graduationYear: zod.string().optional(),
+          gpa: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    skills: zod.array(zod.string()).optional(),
+    template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
+  }),
+});
+
+/**
+ * @summary Get a resume by ID
+ */
+export const GetResumeParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetResumeResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  title: zod.string(),
+  data: zod.object({
+    personalInfo: zod.object({
+      fullName: zod.string(),
+      email: zod.string(),
+      phone: zod.string().optional(),
+      location: zod.string().optional(),
+      website: zod.string().optional(),
+      linkedin: zod.string().optional(),
+    }),
+    summary: zod.string().optional(),
+    workExperience: zod
+      .array(
+        zod.object({
+          jobTitle: zod.string(),
+          company: zod.string(),
+          location: zod.string().optional(),
+          startDate: zod.string(),
+          endDate: zod.string().optional(),
+          isCurrent: zod.boolean().optional(),
+          responsibilities: zod.string().optional(),
+          bullets: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    education: zod
+      .array(
+        zod.object({
+          degree: zod.string(),
+          institution: zod.string(),
+          location: zod.string().optional(),
+          graduationYear: zod.string().optional(),
+          gpa: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    skills: zod.array(zod.string()).optional(),
+    template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
+  }),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update a resume
+ */
+export const UpdateResumeParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateResumeBody = zod.object({
+  title: zod.string(),
+  data: zod.object({
+    personalInfo: zod.object({
+      fullName: zod.string(),
+      email: zod.string(),
+      phone: zod.string().optional(),
+      location: zod.string().optional(),
+      website: zod.string().optional(),
+      linkedin: zod.string().optional(),
+    }),
+    summary: zod.string().optional(),
+    workExperience: zod
+      .array(
+        zod.object({
+          jobTitle: zod.string(),
+          company: zod.string(),
+          location: zod.string().optional(),
+          startDate: zod.string(),
+          endDate: zod.string().optional(),
+          isCurrent: zod.boolean().optional(),
+          responsibilities: zod.string().optional(),
+          bullets: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    education: zod
+      .array(
+        zod.object({
+          degree: zod.string(),
+          institution: zod.string(),
+          location: zod.string().optional(),
+          graduationYear: zod.string().optional(),
+          gpa: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    skills: zod.array(zod.string()).optional(),
+    template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
+  }),
+});
+
+export const UpdateResumeResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  title: zod.string(),
+  data: zod.object({
+    personalInfo: zod.object({
+      fullName: zod.string(),
+      email: zod.string(),
+      phone: zod.string().optional(),
+      location: zod.string().optional(),
+      website: zod.string().optional(),
+      linkedin: zod.string().optional(),
+    }),
+    summary: zod.string().optional(),
+    workExperience: zod
+      .array(
+        zod.object({
+          jobTitle: zod.string(),
+          company: zod.string(),
+          location: zod.string().optional(),
+          startDate: zod.string(),
+          endDate: zod.string().optional(),
+          isCurrent: zod.boolean().optional(),
+          responsibilities: zod.string().optional(),
+          bullets: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    education: zod
+      .array(
+        zod.object({
+          degree: zod.string(),
+          institution: zod.string(),
+          location: zod.string().optional(),
+          graduationYear: zod.string().optional(),
+          gpa: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    skills: zod.array(zod.string()).optional(),
+    template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
+  }),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a resume
+ */
+export const DeleteResumeParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary List all cover letters for current user
+ */
+export const ListCoverLettersResponseItem = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  title: zod.string(),
+  jobTitle: zod.string().optional(),
+  companyName: zod.string().optional(),
+  content: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListCoverLettersResponse = zod.array(ListCoverLettersResponseItem);
+
+/**
+ * @summary Create a new cover letter
+ */
+export const CreateCoverLetterBody = zod.object({
+  title: zod.string(),
+  jobTitle: zod.string().optional(),
+  companyName: zod.string().optional(),
+  content: zod.string(),
+});
+
+/**
+ * @summary Get a cover letter by ID
+ */
+export const GetCoverLetterParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetCoverLetterResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  title: zod.string(),
+  jobTitle: zod.string().optional(),
+  companyName: zod.string().optional(),
+  content: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update a cover letter
+ */
+export const UpdateCoverLetterParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateCoverLetterBody = zod.object({
+  title: zod.string().optional(),
+  content: zod.string().optional(),
+});
+
+export const UpdateCoverLetterResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  title: zod.string(),
+  jobTitle: zod.string().optional(),
+  companyName: zod.string().optional(),
+  content: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a cover letter
+ */
+export const DeleteCoverLetterParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary Generate a professional resume summary using Claude
+ */
+export const GenerateResumeSummaryBody = zod.object({
+  fullName: zod.string(),
+  jobTitle: zod.string(),
+  yearsExperience: zod.string().optional(),
+  skills: zod.array(zod.string()).optional(),
+  highlights: zod.string().optional(),
+});
+
+export const GenerateResumeSummaryResponse = zod.object({
+  text: zod.string(),
+});
+
+/**
+ * @summary Generate ATS-optimized bullet points for a job role
+ */
+export const GenerateJobBulletsBody = zod.object({
+  jobTitle: zod.string(),
+  company: zod.string().optional(),
+  responsibilities: zod.string(),
+});
+
+export const GenerateJobBulletsResponse = zod.object({
+  bullets: zod.array(zod.string()),
+});
+
+/**
+ * @summary Generate a tailored cover letter using Claude
+ */
+export const GenerateCoverLetterAIBody = zod.object({
+  jobTitle: zod.string(),
+  companyName: zod.string(),
+  jobDescription: zod.string(),
+  resumeData: zod
+    .object({
+      personalInfo: zod.object({
+        fullName: zod.string(),
+        email: zod.string(),
+        phone: zod.string().optional(),
+        location: zod.string().optional(),
+        website: zod.string().optional(),
+        linkedin: zod.string().optional(),
+      }),
+      summary: zod.string().optional(),
+      workExperience: zod
+        .array(
+          zod.object({
+            jobTitle: zod.string(),
+            company: zod.string(),
+            location: zod.string().optional(),
+            startDate: zod.string(),
+            endDate: zod.string().optional(),
+            isCurrent: zod.boolean().optional(),
+            responsibilities: zod.string().optional(),
+            bullets: zod.array(zod.string()).optional(),
+          }),
+        )
+        .optional(),
+      education: zod
+        .array(
+          zod.object({
+            degree: zod.string(),
+            institution: zod.string(),
+            location: zod.string().optional(),
+            graduationYear: zod.string().optional(),
+            gpa: zod.string().optional(),
+          }),
+        )
+        .optional(),
+      skills: zod.array(zod.string()).optional(),
+      template: zod
+        .enum(["modern", "classic", "minimal", "creative"])
+        .optional(),
+    })
+    .optional(),
+});
+
+export const GenerateCoverLetterAIResponse = zod.object({
+  text: zod.string(),
+});
+
+/**
+ * @summary Analyze resume against job description (Pro only)
+ */
+export const OptimizeResumeBody = zod.object({
+  resumeText: zod.string(),
+  jobDescription: zod.string(),
+});
+
+export const OptimizeResumeResponse = zod.object({
+  atsScore: zod.number(),
+  missingKeywords: zod.array(zod.string()),
+  suggestions: zod.array(zod.string()),
+});
+
+/**
+ * @summary Generate LinkedIn About section (Pro only)
+ */
+export const GenerateLinkedInSummaryBody = zod.object({
+  resumeData: zod.object({
+    personalInfo: zod.object({
+      fullName: zod.string(),
+      email: zod.string(),
+      phone: zod.string().optional(),
+      location: zod.string().optional(),
+      website: zod.string().optional(),
+      linkedin: zod.string().optional(),
+    }),
+    summary: zod.string().optional(),
+    workExperience: zod
+      .array(
+        zod.object({
+          jobTitle: zod.string(),
+          company: zod.string(),
+          location: zod.string().optional(),
+          startDate: zod.string(),
+          endDate: zod.string().optional(),
+          isCurrent: zod.boolean().optional(),
+          responsibilities: zod.string().optional(),
+          bullets: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    education: zod
+      .array(
+        zod.object({
+          degree: zod.string(),
+          institution: zod.string(),
+          location: zod.string().optional(),
+          graduationYear: zod.string().optional(),
+          gpa: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    skills: zod.array(zod.string()).optional(),
+    template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
+  }),
+});
+
+export const GenerateLinkedInSummaryResponse = zod.object({
+  text: zod.string(),
+});
+
+/**
+ * @summary Generate interview questions and answers (Pro only)
+ */
+export const GenerateInterviewQuestionsBody = zod.object({
+  jobTitle: zod.string(),
+  jobDescription: zod.string(),
+});
+
+export const GenerateInterviewQuestionsResponse = zod.object({
+  questions: zod.array(
+    zod.object({
+      question: zod.string(),
+      idealAnswer: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create a Razorpay order
+ */
+export const CreatePaymentOrderBody = zod.object({
+  plan: zod.enum(["monthly", "yearly"]),
+});
+
+export const CreatePaymentOrderResponse = zod.object({
+  orderId: zod.string(),
+  amount: zod.number(),
+  currency: zod.string(),
+  keyId: zod.string(),
+});
+
+/**
+ * @summary Verify Razorpay payment and upgrade subscription
+ */
+export const VerifyPaymentBody = zod.object({
+  razorpayOrderId: zod.string(),
+  razorpayPaymentId: zod.string(),
+  razorpaySignature: zod.string(),
+  plan: zod.enum(["monthly", "yearly"]),
+});
+
+export const VerifyPaymentResponse = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  name: zod.string().optional(),
+  avatarUrl: zod.string().optional(),
+  plan: zod.enum(["free", "pro"]),
+  usageResumeCount: zod.number(),
+  usageCoverLetterCount: zod.number(),
+  subscriptionExpiresAt: zod.string().nullish(),
+  createdAt: zod.string().optional(),
 });

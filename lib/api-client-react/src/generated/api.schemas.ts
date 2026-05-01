@@ -8,3 +8,208 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface VerifyTokenBody {
+  token: string;
+}
+
+export interface UpdateUserBody {
+  name?: string;
+  avatarUrl?: string;
+}
+
+export type UserProfilePlan =
+  (typeof UserProfilePlan)[keyof typeof UserProfilePlan];
+
+export const UserProfilePlan = {
+  free: "free",
+  pro: "pro",
+} as const;
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+  plan: UserProfilePlan;
+  usageResumeCount: number;
+  usageCoverLetterCount: number;
+  subscriptionExpiresAt?: string | null;
+  createdAt?: string;
+}
+
+export interface WorkExperience {
+  jobTitle: string;
+  company: string;
+  location?: string;
+  startDate: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  responsibilities?: string;
+  bullets?: string[];
+}
+
+export interface Education {
+  degree: string;
+  institution: string;
+  location?: string;
+  graduationYear?: string;
+  gpa?: string;
+}
+
+export type ResumeDataPersonalInfo = {
+  fullName: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  website?: string;
+  linkedin?: string;
+};
+
+export type ResumeDataTemplate =
+  (typeof ResumeDataTemplate)[keyof typeof ResumeDataTemplate];
+
+export const ResumeDataTemplate = {
+  modern: "modern",
+  classic: "classic",
+  minimal: "minimal",
+  creative: "creative",
+} as const;
+
+export interface ResumeData {
+  personalInfo: ResumeDataPersonalInfo;
+  summary?: string;
+  workExperience?: WorkExperience[];
+  education?: Education[];
+  skills?: string[];
+  template?: ResumeDataTemplate;
+}
+
+export interface Resume {
+  id: string;
+  userId: string;
+  title: string;
+  data: ResumeData;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateResumeBody {
+  title: string;
+  data: ResumeData;
+}
+
+export interface CoverLetter {
+  id: string;
+  userId: string;
+  title: string;
+  jobTitle?: string;
+  companyName?: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCoverLetterBody {
+  title: string;
+  jobTitle?: string;
+  companyName?: string;
+  content: string;
+}
+
+export interface UpdateCoverLetterBody {
+  title?: string;
+  content?: string;
+}
+
+export interface ResumeSummaryBody {
+  fullName: string;
+  jobTitle: string;
+  yearsExperience?: string;
+  skills?: string[];
+  highlights?: string;
+}
+
+export interface JobBulletsBody {
+  jobTitle: string;
+  company?: string;
+  responsibilities: string;
+}
+
+export interface CoverLetterAIBody {
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  resumeData?: ResumeData;
+}
+
+export interface OptimizeResumeBody {
+  resumeText: string;
+  jobDescription: string;
+}
+
+export interface LinkedInSummaryBody {
+  resumeData: ResumeData;
+}
+
+export interface InterviewQuestionsBody {
+  jobTitle: string;
+  jobDescription: string;
+}
+
+export interface GeneratedTextResult {
+  text: string;
+}
+
+export interface GeneratedBulletsResult {
+  bullets: string[];
+}
+
+export interface OptimizeResumeResult {
+  atsScore: number;
+  missingKeywords: string[];
+  suggestions: string[];
+}
+
+export interface InterviewQuestion {
+  question: string;
+  idealAnswer: string;
+}
+
+export interface InterviewQuestionsResult {
+  questions: InterviewQuestion[];
+}
+
+export type CreateOrderBodyPlan =
+  (typeof CreateOrderBodyPlan)[keyof typeof CreateOrderBodyPlan];
+
+export const CreateOrderBodyPlan = {
+  monthly: "monthly",
+  yearly: "yearly",
+} as const;
+
+export interface CreateOrderBody {
+  plan: CreateOrderBodyPlan;
+}
+
+export interface PaymentOrder {
+  orderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+}
+
+export type VerifyPaymentBodyPlan =
+  (typeof VerifyPaymentBodyPlan)[keyof typeof VerifyPaymentBodyPlan];
+
+export const VerifyPaymentBodyPlan = {
+  monthly: "monthly",
+  yearly: "yearly",
+} as const;
+
+export interface VerifyPaymentBody {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+  plan: VerifyPaymentBodyPlan;
+}

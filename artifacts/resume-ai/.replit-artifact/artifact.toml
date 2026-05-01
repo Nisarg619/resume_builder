@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "ResumeAI"
+version = "1.0.0"
+id = "artifacts/resume-ai"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 24153
+
+[services.development]
+run = "pnpm --filter @workspace/resume-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/resume-ai", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/resume-ai", "run", "serve" ]
+
+[services.env]
+PORT = "24153"
+BASE_PATH = "/"
