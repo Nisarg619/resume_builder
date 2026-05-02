@@ -118,6 +118,16 @@ export default function DashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: "#01579B", borderRadius: colors.radius }]}
+            onPress={() => router.push("/upload-resume")}
+            activeOpacity={0.85}
+          >
+            <Feather name="upload" size={24} color="#fff" />
+            <Text style={styles.actionTitle}>Upload PDF</Text>
+            <Text style={styles.actionSub}>95%+ ATS boost</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.actionCard, {
               backgroundColor: profile?.plan === "pro" ? "#4A148C" : colors.muted,
               borderRadius: colors.radius,

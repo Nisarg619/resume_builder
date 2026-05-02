@@ -1,5 +1,106 @@
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
+export interface ResumeData {
+  personalInfo: {
+    fullName: string; email: string; phone: string;
+    location: string; website: string; linkedin: string;
+  };
+  summary: string;
+  workExperience: Array<{
+    jobTitle: string; company: string; location: string;
+    startDate: string; endDate: string; isCurrent: boolean;
+    responsibilities: string; bullets: string[];
+  }>;
+  education: Array<{
+    degree: string; institution: string; location: string;
+    graduationYear: string; gpa: string;
+  }>;
+  skills: string[];
+  template: string;
+}
+
+const RESUME_JSON_SCHEMA = `{
+  "personalInfo": { "fullName": "", "email": "", "phone": "", "location": "", "website": "", "linkedin": "" },
+  "summary": "",
+  "workExperience": [{ "jobTitle": "", "company": "", "location": "", "startDate": "", "endDate": "", "isCurrent": false, "responsibilities": "", "bullets": [] }],
+  "education": [{ "degree": "", "institution": "", "location": "", "graduationYear": "", "gpa": "" }],
+  "skills": [],
+  "template": "modern"
+}`;
+
+export async function parseResumeFromText(text: string): Promise<ResumeData> {
+  const prompt = `You are a resume parser. Extract all information from the resume text below and return a structured JSON object.
+
+Return ONLY valid JSON matching this exact schema (no markdown, no explanation):
+${RESUME_JSON_SCHEMA}
+
+Rules:
+- Extract every piece of information present. Leave fields as empty string if not found.
+- For workExperience, put the full description in "responsibilities" and convert bullet points to the "bullets" array.
+- If the person is currently employed, set "isCurrent": true and "endDate": "Present".
+- For skills, extract all technical and soft skills mentioned anywhere in the resume.
+- Do not invent information. Only extract what is explicitly written.
+
+Resume text:
+${text}`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8192,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const block = message.content[0];
+  if (block.type !== "text") throw new Error("No text response");
+  const cleaned = block.text.replace(/```json\n?|\n?```/g, "").trim();
+  return JSON.parse(cleaned) as ResumeData;
+}
+
+export async function atsBoostResume(params: {
+  resumeData: ResumeData;
+  jobDescription?: string;
+}): Promise<{ optimizedData: ResumeData; improvements: string[]; estimatedScore: number }> {
+  const jobSection = params.jobDescription
+    ? `\nTarget Job Description (optimize for this role):\n${params.jobDescription}`
+    : "\nOptimize for general ATS systems across industries.";
+
+  const prompt = `You are an elite resume writer and ATS optimization expert. Rewrite this resume to achieve a 95%+ ATS score while keeping all facts 100% accurate.
+
+STRICT RULES:
+1. Keep all names, companies, dates, degrees, and locations EXACTLY as provided — never fabricate data.
+2. Rewrite every bullet point to start with a strong action verb and include specific metrics/outcomes where inferable.
+3. Expand the skills list with relevant technical tools, methodologies, and keywords from the job description.
+4. Rewrite the professional summary to be keyword-rich and results-focused (3-4 sentences).
+5. Ensure each job has at least 3-5 strong, quantified bullet points.
+6. Add industry-standard keywords naturally throughout.
+${jobSection}
+
+After optimizing, also return:
+- "improvements": array of 5-8 specific things you improved (for user feedback)
+- "estimatedScore": integer 95-99 (your estimated ATS match score)
+
+Return ONLY valid JSON with this structure (no markdown, no explanation):
+{
+  "optimizedData": ${RESUME_JSON_SCHEMA},
+  "improvements": ["..."],
+  "estimatedScore": 97
+}
+
+Current resume to optimize:
+${JSON.stringify(params.resumeData, null, 2)}`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8192,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const block = message.content[0];
+  if (block.type !== "text") throw new Error("No text response");
+  const cleaned = block.text.replace(/```json\n?|\n?```/g, "").trim();
+  return JSON.parse(cleaned);
+}
+
 export async function generateResumeSummary(params: {
   fullName: string;
   jobTitle: string;

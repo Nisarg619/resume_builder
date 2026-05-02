@@ -53,6 +53,7 @@ function RootLayoutNav() {
       <Stack.Screen name="cover-letter" options={{ presentation: "modal" }} />
       <Stack.Screen name="optimizer" options={{ presentation: "modal" }} />
       <Stack.Screen name="interview-prep" options={{ presentation: "modal" }} />
+      <Stack.Screen name="upload-resume" options={{ presentation: "modal" }} />
     </Stack>
   );
 }
