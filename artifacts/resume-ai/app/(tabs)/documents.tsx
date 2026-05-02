@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,6 +15,8 @@ import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useListResumes, useListCoverLetters, useDeleteResume, useDeleteCoverLetter } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { downloadResumePdf } from "@/utils/resumePdf";
+import type { ResumeData } from "@/context/ResumeContext";
 
 type Tab = "resumes" | "letters";
 
@@ -22,6 +25,7 @@ export default function DocumentsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("resumes");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data: resumes, isLoading: rLoading } = useListResumes();
   const { data: coverLetters, isLoading: lLoading } = useListCoverLetters();
@@ -31,6 +35,19 @@ export default function DocumentsScreen() {
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
   const bottomPad = isWeb ? 34 : insets.bottom;
+
+  const handleDownload = async (item: any) => {
+    if (tab !== "resumes") return;
+    setDownloadingId(item.id);
+    try {
+      const resumeData: ResumeData = item.data ?? item;
+      await downloadResumePdf(resumeData, item.title ?? "Resume");
+    } catch {
+      Alert.alert("Error", "Could not generate PDF. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const confirmDelete = (id: string, type: "resume" | "letter") => {
     Alert.alert(
@@ -111,9 +128,22 @@ export default function DocumentsScreen() {
                   {item.companyName ? `${item.companyName} · ` : ""}{new Date(item.updatedAt).toLocaleDateString()}
                 </Text>
               </View>
+              {tab === "resumes" && (
+                <TouchableOpacity
+                  onPress={() => handleDownload(item)}
+                  style={styles.actionBtn}
+                  disabled={downloadingId === item.id}
+                >
+                  {downloadingId === item.id ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Feather name="download" size={18} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 onPress={() => confirmDelete(item.id, tab === "resumes" ? "resume" : "letter")}
-                style={styles.deleteBtn}
+                style={styles.actionBtn}
               >
                 <Feather name="trash-2" size={18} color={colors.destructive} />
               </TouchableOpacity>
@@ -138,7 +168,7 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   itemTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   itemSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
-  deleteBtn: { padding: 6 },
+  actionBtn: { padding: 6 },
   empty: { alignItems: "center", gap: 12, paddingTop: 80 },
   emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold" },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: "#6B7280" },

@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   Switch,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useGetResume, useCreateResume, useUpdateResume } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import { downloadResumePdf } from "@/utils/resumePdf";
 
 const STEPS = ["Personal", "Experience", "Education", "Skills", "Preview"];
 const TEMPLATES: { id: ResumeTemplate; label: string; color: string }[] = [
@@ -38,6 +40,7 @@ export default function ResumeBuilderScreen() {
   const { currentResume, setCurrentResume, resumeTitle, setResumeTitle, resetResume } = useResume();
   const [step, setStep] = useState(0);
   const [aiLoading, setAiLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [skillsText, setSkillsText] = useState("");
 
@@ -194,11 +197,22 @@ export default function ResumeBuilderScreen() {
       } else {
         await createMutation.mutateAsync({ data: { title: resumeTitle, data: currentResume as any } });
       }
-      qc.invalidateQueries();
+      await qc.invalidateQueries();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Saved!", "Your resume has been saved.", [{ text: "OK", onPress: () => router.back() }]);
+      router.back();
     } catch {
       Alert.alert("Error", "Failed to save resume. Please try again.");
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setPdfLoading(true);
+    try {
+      await downloadResumePdf(currentResume, resumeTitle || "Resume");
+    } catch {
+      Alert.alert("Error", "Could not generate PDF. Please try again.");
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -548,6 +562,21 @@ export default function ResumeBuilderScreen() {
               fullWidth
               style={{ marginTop: 8 }}
             />
+            <TouchableOpacity
+              style={[styles.downloadBtn, { borderColor: colors.border, borderRadius: colors.radius }]}
+              onPress={handleDownloadPdf}
+              disabled={pdfLoading}
+              activeOpacity={0.7}
+            >
+              {pdfLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Feather name="download" size={16} color={colors.primary} />
+              )}
+              <Text style={[styles.downloadBtnText, { color: colors.primary }]}>
+                {pdfLoading ? "Generating PDF…" : "Download as PDF"}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -619,4 +648,14 @@ const styles = StyleSheet.create({
   previewDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
   previewBullet: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
   previewSkills: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  downloadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    paddingVertical: 12,
+    marginTop: 10,
+  },
+  downloadBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
 });
