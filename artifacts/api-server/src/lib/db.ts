@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { pg } from "@workspace/db";
+import { pool } from "@workspace/db";
 import * as schema from "@workspace/db/schema";
 
-export const db = drizzle(pg, { schema });
+export const db = drizzle(pool, { schema });
 export { schema };

@@ -31,19 +31,30 @@ export default function CoverLetterScreen() {
   const [jobDescription, setJobDescription] = useState("");
   const [content, setContent] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const { data: existing } = useGetCoverLetter(id || "", { query: { enabled: !!id, queryKey: ["cover-letter", id] } });
   const createMutation = useCreateCoverLetter();
   const updateMutation = useUpdateCoverLetter();
 
   useEffect(() => {
-    if (existing) {
+    if (!id) {
+      setTitle("Cover Letter");
+      setJobTitle("");
+      setCompanyName("");
+      setJobDescription("");
+      setContent("");
+      setInitialized(true);
+      return;
+    }
+    if (existing && !initialized) {
       setTitle(existing.title);
       setJobTitle(existing.jobTitle || "");
       setCompanyName(existing.companyName || "");
       setContent(existing.content);
+      setInitialized(true);
     }
-  }, [existing]);
+  }, [existing, id, initialized]);
 
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;

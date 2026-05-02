@@ -74,11 +74,12 @@ router.post("/cover-letters", authMiddleware, async (req: AuthenticatedRequest, 
 });
 
 router.get("/cover-letters/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const id = req.params["id"] as string;
   try {
     const [letter] = await db
       .select()
       .from(coverLettersTable)
-      .where(and(eq(coverLettersTable.id, req.params["id"]!), eq(coverLettersTable.userId, req.userId!)));
+      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.userId!)));
 
     if (!letter) {
       res.status(404).json({ error: "Cover letter not found" });
@@ -102,13 +103,14 @@ router.get("/cover-letters/:id", authMiddleware, async (req: AuthenticatedReques
 });
 
 router.put("/cover-letters/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const id = req.params["id"] as string;
   const { title, content } = req.body as { title?: string; content?: string };
 
   try {
     const [letter] = await db
       .update(coverLettersTable)
       .set({ title, content, updatedAt: new Date() })
-      .where(and(eq(coverLettersTable.id, req.params["id"]!), eq(coverLettersTable.userId, req.userId!)))
+      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.userId!)))
       .returning();
 
     if (!letter) {
@@ -133,10 +135,11 @@ router.put("/cover-letters/:id", authMiddleware, async (req: AuthenticatedReques
 });
 
 router.delete("/cover-letters/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const id = req.params["id"] as string;
   try {
     await db
       .delete(coverLettersTable)
-      .where(and(eq(coverLettersTable.id, req.params["id"]!), eq(coverLettersTable.userId, req.userId!)));
+      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.userId!)));
 
     res.status(204).send();
   } catch (err) {

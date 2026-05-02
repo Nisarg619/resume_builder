@@ -65,11 +65,12 @@ router.post("/resumes", authMiddleware, async (req: AuthenticatedRequest, res) =
 });
 
 router.get("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const id = req.params["id"] as string;
   try {
     const [resume] = await db
       .select()
       .from(resumesTable)
-      .where(and(eq(resumesTable.id, req.params["id"]!), eq(resumesTable.userId, req.userId!)));
+      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.userId!)));
 
     if (!resume) {
       res.status(404).json({ error: "Resume not found" });
@@ -91,13 +92,14 @@ router.get("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res
 });
 
 router.put("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const id = req.params["id"] as string;
   const { title, data } = req.body as { title: string; data: unknown };
 
   try {
     const [resume] = await db
       .update(resumesTable)
       .set({ title, data: data as Record<string, unknown>, updatedAt: new Date() })
-      .where(and(eq(resumesTable.id, req.params["id"]!), eq(resumesTable.userId, req.userId!)))
+      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.userId!)))
       .returning();
 
     if (!resume) {
@@ -120,10 +122,11 @@ router.put("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res
 });
 
 router.delete("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
+  const id = req.params["id"] as string;
   try {
     await db
       .delete(resumesTable)
-      .where(and(eq(resumesTable.id, req.params["id"]!), eq(resumesTable.userId, req.userId!)));
+      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.userId!)));
 
     res.status(204).send();
   } catch (err) {

@@ -40,8 +40,8 @@ ${params.responsibilities}`;
   return block.text
     .trim()
     .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => l.replace(/^[-•*]\s*/, "").trim());
+    .filter((l: string) => l.trim().length > 0)
+    .map((l: string) => l.replace(/^[-•*]\s*/, "").trim());
 }
 
 export async function generateCoverLetter(params: {

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  TextInput,
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,12 +16,16 @@ import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/Card";
 import { ProBadge } from "@/components/ProBadge";
 import { PremiumModal } from "@/components/PremiumModal";
+import { StyledButton } from "@/components/StyledButton";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, refreshProfile } = useAuth();
   const [proModalVisible, setProModalVisible] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
@@ -31,6 +36,43 @@ export default function ProfileScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: signOut },
     ]);
+  };
+
+  const handleEditName = () => {
+    setNameInput(profile?.name || "");
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!nameInput.trim()) {
+      Alert.alert("Invalid", "Name cannot be empty.");
+      return;
+    }
+    setSavingName(true);
+    try {
+      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
+      const base = domain ? `https://${domain}` : "";
+      const { supabase } = await import("@/lib/supabase");
+      const { data } = await supabase.auth.getSession();
+      const res = await fetch(`${base}/api/users/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${data.session?.access_token}`,
+        },
+        body: JSON.stringify({ name: nameInput.trim() }),
+      });
+      if (res.ok) {
+        await refreshProfile();
+        setEditingName(false);
+      } else {
+        Alert.alert("Error", "Failed to update name. Please try again.");
+      }
+    } catch {
+      Alert.alert("Error", "Failed to update name. Please try again.");
+    } finally {
+      setSavingName(false);
+    }
   };
 
   const initials = profile?.name
@@ -50,9 +92,32 @@ export default function ProfileScreen() {
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={{ alignItems: "center", gap: 4 }}>
-          <Text style={[styles.userName, { color: colors.foreground }]}>
-            {profile?.name || "User"}
-          </Text>
+          {editingName ? (
+            <View style={styles.nameEditRow}>
+              <TextInput
+                value={nameInput}
+                onChangeText={setNameInput}
+                style={[styles.nameInput, { borderColor: colors.input, color: colors.foreground, backgroundColor: colors.background, borderRadius: colors.radius - 4 }]}
+                placeholder="Your full name"
+                placeholderTextColor={colors.mutedForeground}
+                autoCapitalize="words"
+                autoFocus
+              />
+              <TouchableOpacity onPress={handleSaveName} disabled={savingName} style={[styles.nameActionBtn, { backgroundColor: colors.primary, borderRadius: colors.radius - 4 }]}>
+                <Text style={styles.nameActionBtnText}>{savingName ? "..." : "Save"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingName(false)} style={[styles.nameActionBtn, { backgroundColor: colors.muted, borderRadius: colors.radius - 4 }]}>
+                <Text style={[styles.nameActionBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={handleEditName} style={styles.nameRow}>
+              <Text style={[styles.userName, { color: colors.foreground }]}>
+                {profile?.name || "Tap to set name"}
+              </Text>
+              <Feather name="edit-2" size={14} color={colors.mutedForeground} style={{ marginLeft: 6 }} />
+            </TouchableOpacity>
+          )}
           <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>{profile?.email}</Text>
           {profile?.plan === "pro" ? (
             <ProBadge />
@@ -141,6 +206,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff" },
+  nameRow: { flexDirection: "row", alignItems: "center" },
+  nameEditRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12 },
+  nameInput: { flex: 1, borderWidth: 1.5, padding: 10, fontSize: 15, fontFamily: "Inter_400Regular" },
+  nameActionBtn: { paddingHorizontal: 12, paddingVertical: 10 },
+  nameActionBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
   userName: { fontSize: 20, fontFamily: "Inter_700Bold" },
   userEmail: { fontSize: 14, fontFamily: "Inter_400Regular" },
   freeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
