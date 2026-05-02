@@ -35,16 +35,12 @@ function RootLayoutNav() {
   const navState = useRootNavigationState();
 
   useEffect(() => {
-    // Wait for navigator to be ready and auth to resolve
     if (!navState?.key || loading) return;
-
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!session && !inAuthGroup) {
-      // Not signed in and not on auth screen → go to login
       router.replace("/(auth)/login");
     } else if (session && inAuthGroup) {
-      // Signed in but still on auth screen → go to app
       router.replace("/(tabs)");
     }
   }, [session, loading, segments, navState?.key]);

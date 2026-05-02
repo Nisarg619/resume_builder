@@ -45,11 +45,11 @@ export default function LoginScreen() {
           options: { data: { full_name: name.trim() } },
         });
         if (error) throw error;
-        Alert.alert(
-          "Account Created!",
-          "Check your email to confirm your account, then sign in.",
-          [{ text: "OK", onPress: () => setIsSignUp(false) }]
-        );
+        Alert.alert("Account Created!", "Check your email to confirm your account, then sign in.");
+        setIsSignUp(false);
+        setEmail("");
+        setPassword("");
+        setName("");
       } else {
         await signInWithEmail(email.trim(), password);
       }
@@ -68,6 +68,7 @@ export default function LoginScreen() {
     } catch (err: unknown) {
       const e = err as { message?: string };
       Alert.alert("Google Sign-In Failed", e?.message || "Unable to continue with Google.");
+    } finally {
       setGoogleLoading(false);
     }
   };
@@ -94,7 +95,7 @@ export default function LoginScreen() {
           <Text style={[styles.tagline, { color: colors.mutedForeground }]}>Build resumes that get interviews</Text>
         </View>
 
-        <View style={[styles.form, { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border }]}>
+        <View style={[styles.form, { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border }]}> 
           <Text style={[styles.formTitle, { color: colors.foreground }]}>
             {isSignUp ? "Create account" : "Welcome back"}
           </Text>
@@ -124,7 +125,6 @@ export default function LoginScreen() {
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
-                returnKeyType="next"
               />
             </View>
           )}
@@ -140,7 +140,6 @@ export default function LoginScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
-              returnKeyType="next"
             />
           </View>
 
@@ -169,7 +168,7 @@ export default function LoginScreen() {
         </View>
 
         <TouchableOpacity onPress={() => { setIsSignUp(!isSignUp); setLoading(false); setGoogleLoading(false); }} style={styles.toggle}>
-          <Text style={[styles.toggleText, { color: colors.mutedForeground }]}>
+          <Text style={[styles.toggleText, { color: colors.mutedForeground }]}> 
             {isSignUp ? "Already have an account? " : "Don't have an account? "}
             <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>
               {isSignUp ? "Sign in" : "Sign up free"}

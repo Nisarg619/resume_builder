@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
+import * as Linking from "expo-linking";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -48,6 +49,10 @@ async function syncUserWithBackend(token: string): Promise<UserProfile | null> {
   } catch {
     return null;
   }
+}
+
+function getWebRedirectUrl() {
+  return `${window.location.origin}/`;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -105,18 +110,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const redirectTo = Platform.OS === "web" ? window.location.origin : `${process.env["EXPO_PUBLIC_DOMAIN"] ? `https://${process.env["EXPO_PUBLIC_DOMAIN"]}` : ""}/auth/callback`;
+    const redirectTo = Platform.OS === "web" ? getWebRedirectUrl() : Linking.createURL("/");
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo,
-      },
+      options: { redirectTo },
     });
     if (error) throw error;
-    if (data.url && Platform.OS !== "web") {
-      await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    } else if (data.url && Platform.OS === "web") {
-      window.location.assign(data.url);
+    if (Platform.OS !== "web" && data.url) {
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type === "success" && result.url) {
+        await supabase.auth.exchangeCodeForSession(result.url);
+      }
     }
   };
 
