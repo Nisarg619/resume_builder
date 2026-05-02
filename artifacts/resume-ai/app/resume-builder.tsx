@@ -39,6 +39,7 @@ export default function ResumeBuilderScreen() {
   const [step, setStep] = useState(0);
   const [aiLoading, setAiLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [skillsText, setSkillsText] = useState("");
 
   const { data: existingResume, isLoading: loadingResume } = useGetResume(id || "", {
     query: { enabled: !!id, queryKey: ["resume", id] },
@@ -49,6 +50,7 @@ export default function ResumeBuilderScreen() {
   useEffect(() => {
     if (!id) {
       resetResume();
+      setSkillsText("");
       setInitialized(true);
       return;
     }
@@ -57,6 +59,7 @@ export default function ResumeBuilderScreen() {
       const resumeData = resume.data ?? resume;
       if (resumeData && typeof resumeData === "object" && "personalInfo" in resumeData) {
         setCurrentResume(resumeData);
+        setSkillsText(Array.isArray(resumeData.skills) ? resumeData.skills.join(", ") : "");
       }
       setResumeTitle(resume.title ?? "My Resume");
       setInitialized(true);
@@ -435,11 +438,12 @@ export default function ResumeBuilderScreen() {
                 style={[inputStyle, styles.textarea]}
                 placeholder="React, TypeScript, Node.js, AWS..."
                 placeholderTextColor={colors.mutedForeground}
-                value={currentResume.skills.join(", ")}
-                onChangeText={(v) =>
+                value={skillsText}
+                onChangeText={setSkillsText}
+                onBlur={() =>
                   setCurrentResume({
                     ...currentResume,
-                    skills: v.split(",").map((s) => s.trim()).filter(Boolean),
+                    skills: skillsText.split(",").map((s) => s.trim()).filter(Boolean),
                   })
                 }
                 multiline

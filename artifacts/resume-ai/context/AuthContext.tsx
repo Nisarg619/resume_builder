@@ -110,16 +110,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const redirectTo = Platform.OS === "web" ? getWebRedirectUrl() : Linking.createURL("/");
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-    if (error) throw error;
-    if (Platform.OS !== "web" && data.url) {
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      if (result.type === "success" && result.url) {
-        await supabase.auth.exchangeCodeForSession(result.url);
+    if (Platform.OS === "web") {
+      const redirectTo = getWebRedirectUrl();
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo, skipBrowserRedirect: false },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } else {
+      const redirectTo = Linking.createURL("/");
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+      if (error) throw error;
+      if (data.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+        if (result.type === "success" && result.url) {
+          await supabase.auth.exchangeCodeForSession(result.url);
+        }
       }
     }
   };
