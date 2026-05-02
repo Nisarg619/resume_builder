@@ -32,7 +32,7 @@ export default function CoverLetterScreen() {
   const [content, setContent] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
 
-  const { data: existing } = useGetCoverLetter(id || "", { query: { enabled: !!id } });
+  const { data: existing } = useGetCoverLetter(id || "", { query: { enabled: !!id, queryKey: ["cover-letter", id] } });
   const createMutation = useCreateCoverLetter();
   const updateMutation = useUpdateCoverLetter();
 
@@ -96,8 +96,8 @@ export default function CoverLetterScreen() {
   const inputStyle = [styles.input, { borderColor: colors.input, color: colors.foreground, backgroundColor: colors.background, borderRadius: colors.radius - 4 }];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+      <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.background, borderBottomColor: colors.border }]}> 
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -115,7 +115,7 @@ export default function CoverLetterScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.row}>
-          <View style={[styles.field, { flex: 1 }]}>
+          <View style={[styles.field, { flex: 1 }]}> 
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Job Title*</Text>
             <TextInput
               style={inputStyle}
@@ -125,7 +125,7 @@ export default function CoverLetterScreen() {
               onChangeText={setJobTitle}
             />
           </View>
-          <View style={[styles.field, { flex: 1 }]}>
+          <View style={[styles.field, { flex: 1 }]}> 
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Company*</Text>
             <TextInput
               style={inputStyle}
@@ -175,11 +175,9 @@ export default function CoverLetterScreen() {
             />
           </View>
         ) : (
-          <View style={[styles.emptyState, { backgroundColor: colors.muted, borderRadius: colors.radius }]}>
+          <View style={[styles.emptyState, { backgroundColor: colors.muted, borderRadius: colors.radius }]}> 
             <Feather name="mail" size={32} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Fill in the details above and tap "Generate" to create a tailored cover letter
-            </Text>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Fill in the details above and tap "Generate" to create a tailored cover letter</Text>
           </View>
         )}
       </ScrollView>

@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
+import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface UserProfile {
   id: string;
@@ -20,6 +24,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -70,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.access_token) {
@@ -99,6 +104,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const signInWithGoogle = async () => {
+    const redirectTo = Platform.OS === "web" ? window.location.origin : `${process.env["EXPO_PUBLIC_DOMAIN"] ? `https://${process.env["EXPO_PUBLIC_DOMAIN"]}` : ""}/auth/callback`;
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+      },
+    });
+    if (error) throw error;
+    if (data.url && Platform.OS !== "web") {
+      await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    } else if (data.url && Platform.OS === "web") {
+      window.location.assign(data.url);
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -112,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       signInWithEmail,
       signUpWithEmail,
+      signInWithGoogle,
       signOut,
       refreshProfile,
     }}>

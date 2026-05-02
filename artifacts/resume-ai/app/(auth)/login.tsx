@@ -19,11 +19,12 @@ import { supabase } from "@/lib/supabase";
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { signInWithEmail } = useAuth();
+  const { signInWithEmail, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
   const handleAuth = async () => {
@@ -51,13 +52,23 @@ export default function LoginScreen() {
         );
       } else {
         await signInWithEmail(email.trim(), password);
-        // Navigation is handled automatically by RootLayoutNav when session changes
       }
     } catch (err: unknown) {
       const e = err as { message?: string };
       Alert.alert("Error", e?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      Alert.alert("Google Sign-In Failed", e?.message || "Unable to continue with Google.");
+      setGoogleLoading(false);
     }
   };
 
@@ -80,15 +91,28 @@ export default function LoginScreen() {
             <Text style={styles.logoText}>R</Text>
           </View>
           <Text style={[styles.appName, { color: colors.primary }]}>ResumeAI</Text>
-          <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
-            Build resumes that get interviews
-          </Text>
+          <Text style={[styles.tagline, { color: colors.mutedForeground }]}>Build resumes that get interviews</Text>
         </View>
 
         <View style={[styles.form, { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border }]}>
           <Text style={[styles.formTitle, { color: colors.foreground }]}>
             {isSignUp ? "Create account" : "Welcome back"}
           </Text>
+
+          <StyledButton
+            title={googleLoading ? "Connecting..." : "Continue with Google"}
+            onPress={handleGoogle}
+            loading={googleLoading}
+            fullWidth
+            variant="outline"
+            style={{ marginBottom: 4 }}
+          />
+
+          <View style={styles.dividerRow}>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          </View>
 
           {isSignUp && (
             <View style={styles.field}>
@@ -144,7 +168,7 @@ export default function LoginScreen() {
           />
         </View>
 
-        <TouchableOpacity onPress={() => { setIsSignUp(!isSignUp); setLoading(false); }} style={styles.toggle}>
+        <TouchableOpacity onPress={() => { setIsSignUp(!isSignUp); setLoading(false); setGoogleLoading(false); }} style={styles.toggle}>
           <Text style={[styles.toggleText, { color: colors.mutedForeground }]}>
             {isSignUp ? "Already have an account? " : "Don't have an account? "}
             <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>
@@ -177,4 +201,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1.5, padding: 14, fontSize: 15, fontFamily: "Inter_400Regular" },
   toggle: { alignItems: "center", paddingVertical: 8 },
   toggleText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  divider: { flex: 1, height: 1 },
+  dividerText: { fontSize: 12, fontFamily: "Inter_500Medium" },
 });
