@@ -6,6 +6,7 @@ import {
   timestamp,
   jsonb,
   uuid,
+  index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -31,7 +32,9 @@ export const resumesTable = pgTable("resumes", {
   data: jsonb("data").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("resumes_user_id_idx").on(table.userId),
+]);
 
 export const coverLettersTable = pgTable("cover_letters", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -42,7 +45,9 @@ export const coverLettersTable = pgTable("cover_letters", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("cover_letters_user_id_idx").on(table.userId),
+]);
 
 export const insertUserSchema = createInsertSchema(usersTable);
 export const insertResumeSchema = createInsertSchema(resumesTable);

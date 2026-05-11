@@ -2,7 +2,12 @@ import { Router } from "express";
 import { authMiddleware, type AuthenticatedRequest } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
 import { coverLettersTable, usersTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "@workspace/db";
+import {
+  success, created, noContent, badRequest, notFound, forbidden, serverError,
+  requireFields, serializeCoverLetter,
+} from "../lib/responses.js";
+import { sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -11,65 +16,57 @@ router.get("/cover-letters", authMiddleware, async (req: AuthenticatedRequest, r
     const letters = await db
       .select()
       .from(coverLettersTable)
-      .where(eq(coverLettersTable.userId, req.userId!))
-      .orderBy(coverLettersTable.updatedAt);
+      .where(eq(coverLettersTable.userId, req.user.id))
+      .orderBy(desc(coverLettersTable.updatedAt));
 
-    res.json(
-      letters.reverse().map((l) => ({
-        id: l.id,
-        userId: l.userId,
-        title: l.title,
-        jobTitle: l.jobTitle,
-        companyName: l.companyName,
-        content: l.content,
-        createdAt: l.createdAt.toISOString(),
-        updatedAt: l.updatedAt.toISOString(),
-      }))
-    );
+    success(res, letters.map(serializeCoverLetter));
   } catch (err) {
     req.log.error({ err }, "List cover letters error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
 router.post("/cover-letters", authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const { title, jobTitle, companyName, content } = req.body as {
-    title: string;
-    jobTitle?: string;
-    companyName?: string;
-    content: string;
-  };
+  const check = requireFields<{ title: string; content: string; jobTitle?: string; companyName?: string }>(req.body, ["title", "content"]);
+  if (!check.valid) {
+    badRequest(res, `Missing required fields: ${check.missing.join(", ")}`);
+    return;
+  }
+  const { title, content, jobTitle, companyName } = check.data;
 
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
+    // Quota Check
+    if (req.user.plan === "free") {
+      const [user] = await db.select({ usageCoverLetterCount: usersTable.usageCoverLetterCount }).from(usersTable).where(eq(usersTable.id, req.user.id));
+      if (user && user.usageCoverLetterCount >= 3) {
+        forbidden(res, "Cover letter limit reached. Upgrade to Pro for unlimited generation.", "LIMIT_REACHED");
+        return;
+      }
     }
 
     const [letter] = await db
       .insert(coverLettersTable)
-      .values({ userId: req.userId!, title, jobTitle, companyName, content })
+      .values({ 
+        userId: req.user.id, 
+        title: title.trim(), 
+        jobTitle: jobTitle?.trim() ?? null, 
+        companyName: companyName?.trim() ?? null, 
+        content: content.trim() 
+      })
       .returning();
 
     await db
       .update(usersTable)
-      .set({ usageCoverLetterCount: user.usageCoverLetterCount + 1, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.userId!));
+      .set({ 
+        usageCoverLetterCount: sql`${usersTable.usageCoverLetterCount} + 1`, 
+        updatedAt: new Date() 
+      })
+      .where(eq(usersTable.id, req.user.id));
 
-    res.status(201).json({
-      id: letter!.id,
-      userId: letter!.userId,
-      title: letter!.title,
-      jobTitle: letter!.jobTitle,
-      companyName: letter!.companyName,
-      content: letter!.content,
-      createdAt: letter!.createdAt.toISOString(),
-      updatedAt: letter!.updatedAt.toISOString(),
-    });
+    created(res, serializeCoverLetter(letter!));
   } catch (err) {
     req.log.error({ err }, "Create cover letter error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
@@ -79,58 +76,43 @@ router.get("/cover-letters/:id", authMiddleware, async (req: AuthenticatedReques
     const [letter] = await db
       .select()
       .from(coverLettersTable)
-      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.userId!)));
+      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.user.id)));
 
-    if (!letter) {
-      res.status(404).json({ error: "Cover letter not found" });
-      return;
-    }
+    if (!letter) { notFound(res, "Cover letter"); return; }
 
-    res.json({
-      id: letter.id,
-      userId: letter.userId,
-      title: letter.title,
-      jobTitle: letter.jobTitle,
-      companyName: letter.companyName,
-      content: letter.content,
-      createdAt: letter.createdAt.toISOString(),
-      updatedAt: letter.updatedAt.toISOString(),
-    });
+    success(res, serializeCoverLetter(letter));
   } catch (err) {
     req.log.error({ err }, "Get cover letter error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
 router.put("/cover-letters/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
   const id = req.params["id"] as string;
-  const { title, content } = req.body as { title?: string; content?: string };
+  const { title, content } = (req.body ?? {}) as { title?: string; content?: string };
+
+  if (!title && !content) {
+    badRequest(res, "At least one of title or content must be provided");
+    return;
+  }
 
   try {
+    const updateSet: Record<string, unknown> = { updatedAt: new Date() };
+    if (title !== undefined) updateSet.title = title;
+    if (content !== undefined) updateSet.content = content;
+
     const [letter] = await db
       .update(coverLettersTable)
-      .set({ title, content, updatedAt: new Date() })
-      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.userId!)))
+      .set(updateSet)
+      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.user.id)))
       .returning();
 
-    if (!letter) {
-      res.status(404).json({ error: "Cover letter not found" });
-      return;
-    }
+    if (!letter) { notFound(res, "Cover letter"); return; }
 
-    res.json({
-      id: letter.id,
-      userId: letter.userId,
-      title: letter.title,
-      jobTitle: letter.jobTitle,
-      companyName: letter.companyName,
-      content: letter.content,
-      createdAt: letter.createdAt.toISOString(),
-      updatedAt: letter.updatedAt.toISOString(),
-    });
+    success(res, serializeCoverLetter(letter));
   } catch (err) {
     req.log.error({ err }, "Update cover letter error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
@@ -139,12 +121,12 @@ router.delete("/cover-letters/:id", authMiddleware, async (req: AuthenticatedReq
   try {
     await db
       .delete(coverLettersTable)
-      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.userId!)));
+      .where(and(eq(coverLettersTable.id, id), eq(coverLettersTable.userId, req.user.id)));
 
-    res.status(204).send();
+    noContent(res);
   } catch (err) {
     req.log.error({ err }, "Delete cover letter error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 

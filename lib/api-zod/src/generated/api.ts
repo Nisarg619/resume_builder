@@ -111,6 +111,34 @@ export const ListResumesResponseItem = zod.object({
       )
       .optional(),
     skills: zod.array(zod.string()).optional(),
+    projects: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string(),
+          link: zod.string().optional(),
+          technologies: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    certifications: zod
+      .array(
+        zod.object({
+          name: zod.string(),
+          issuer: zod.string(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    achievements: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string().optional(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
     template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
   }),
   createdAt: zod.string(),
@@ -159,6 +187,34 @@ export const CreateResumeBody = zod.object({
       )
       .optional(),
     skills: zod.array(zod.string()).optional(),
+    projects: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string(),
+          link: zod.string().optional(),
+          technologies: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    certifications: zod
+      .array(
+        zod.object({
+          name: zod.string(),
+          issuer: zod.string(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    achievements: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string().optional(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
     template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
   }),
 });
@@ -210,6 +266,34 @@ export const GetResumeResponse = zod.object({
       )
       .optional(),
     skills: zod.array(zod.string()).optional(),
+    projects: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string(),
+          link: zod.string().optional(),
+          technologies: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    certifications: zod
+      .array(
+        zod.object({
+          name: zod.string(),
+          issuer: zod.string(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    achievements: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string().optional(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
     template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
   }),
   createdAt: zod.string(),
@@ -261,6 +345,34 @@ export const UpdateResumeBody = zod.object({
       )
       .optional(),
     skills: zod.array(zod.string()).optional(),
+    projects: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string(),
+          link: zod.string().optional(),
+          technologies: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    certifications: zod
+      .array(
+        zod.object({
+          name: zod.string(),
+          issuer: zod.string(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    achievements: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string().optional(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
     template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
   }),
 });
@@ -305,6 +417,34 @@ export const UpdateResumeResponse = zod.object({
       )
       .optional(),
     skills: zod.array(zod.string()).optional(),
+    projects: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string(),
+          link: zod.string().optional(),
+          technologies: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    certifications: zod
+      .array(
+        zod.object({
+          name: zod.string(),
+          issuer: zod.string(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    achievements: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string().optional(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
     template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
   }),
   createdAt: zod.string(),
@@ -463,6 +603,34 @@ export const GenerateCoverLetterAIBody = zod.object({
         )
         .optional(),
       skills: zod.array(zod.string()).optional(),
+      projects: zod
+        .array(
+          zod.object({
+            title: zod.string(),
+            description: zod.string(),
+            link: zod.string().optional(),
+            technologies: zod.array(zod.string()).optional(),
+          }),
+        )
+        .optional(),
+      certifications: zod
+        .array(
+          zod.object({
+            name: zod.string(),
+            issuer: zod.string(),
+            date: zod.string().optional(),
+          }),
+        )
+        .optional(),
+      achievements: zod
+        .array(
+          zod.object({
+            title: zod.string(),
+            description: zod.string().optional(),
+            date: zod.string().optional(),
+          }),
+        )
+        .optional(),
       template: zod
         .enum(["modern", "classic", "minimal", "creative"])
         .optional(),
@@ -528,6 +696,34 @@ export const GenerateLinkedInSummaryBody = zod.object({
       )
       .optional(),
     skills: zod.array(zod.string()).optional(),
+    projects: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string(),
+          link: zod.string().optional(),
+          technologies: zod.array(zod.string()).optional(),
+        }),
+      )
+      .optional(),
+    certifications: zod
+      .array(
+        zod.object({
+          name: zod.string(),
+          issuer: zod.string(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    achievements: zod
+      .array(
+        zod.object({
+          title: zod.string(),
+          description: zod.string().optional(),
+          date: zod.string().optional(),
+        }),
+      )
+      .optional(),
     template: zod.enum(["modern", "classic", "minimal", "creative"]).optional(),
   }),
 });

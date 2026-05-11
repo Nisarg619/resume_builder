@@ -13,7 +13,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
-import { useListResumes, useListCoverLetters, useDeleteResume, useDeleteCoverLetter } from "@workspace/api-client-react";
+import { useListResumes, useListCoverLetters, useDeleteResume, useDeleteCoverLetter, type Resume, type CoverLetter } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { downloadResumePdf } from "@/utils/resumePdf";
 import type { ResumeData } from "@/context/ResumeContext";
@@ -36,11 +36,12 @@ export default function DocumentsScreen() {
   const topPad = isWeb ? 67 : insets.top;
   const bottomPad = isWeb ? 34 : insets.bottom;
 
-  const handleDownload = async (item: any) => {
+  const handleDownload = async (item: Resume | CoverLetter) => {
     if (tab !== "resumes") return;
     setDownloadingId(item.id);
     try {
-      const resumeData: ResumeData = item.data ?? item;
+      const resumeItem = item as Resume;
+      const resumeData = (resumeItem.data ?? item) as ResumeData;
       await downloadResumePdf(resumeData, item.title ?? "Resume");
     } catch {
       Alert.alert("Error", "Could not generate PDF. Please try again.");
@@ -105,7 +106,7 @@ export default function DocumentsScreen() {
             </Text>
           </View>
         ) : (
-          (tab === "resumes" ? resumes! : coverLetters!).map((item: any) => (
+          (tab === "resumes" ? resumes! : coverLetters!).map((item: Resume | CoverLetter) => (
             <TouchableOpacity
               key={item.id}
               style={[styles.card, { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border }]}
@@ -125,7 +126,7 @@ export default function DocumentsScreen() {
               <View style={styles.info}>
                 <Text style={[styles.itemTitle, { color: colors.foreground }]}>{item.title}</Text>
                 <Text style={[styles.itemSub, { color: colors.mutedForeground }]}>
-                  {item.companyName ? `${item.companyName} · ` : ""}{new Date(item.updatedAt).toLocaleDateString()}
+                  {"companyName" in item && item.companyName ? `${item.companyName} · ` : ""}{new Date(item.updatedAt).toLocaleDateString()}
                 </Text>
               </View>
               {tab === "resumes" && (

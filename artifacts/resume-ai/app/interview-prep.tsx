@@ -18,6 +18,7 @@ import { StyledButton } from "@/components/StyledButton";
 import { Card } from "@/components/Card";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import * as Haptics from "expo-haptics";
+import { getApiBaseUrl } from "@/lib/baseUrl";
 
 interface Question {
   question: string;
@@ -27,6 +28,7 @@ interface Question {
 export default function InterviewPrepScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { profile } = useAuth();
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -36,6 +38,13 @@ export default function InterviewPrepScreen() {
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
 
+  React.useEffect(() => {
+    if (profile && profile.plan !== "pro") {
+      router.replace("/(tabs)");
+      Alert.alert("Pro Feature", "Interview Preparation is available only for Pro members.");
+    }
+  }, [profile]);
+
   const generate = async () => {
     if (!jobTitle || !jobDescription) {
       Alert.alert("Missing info", "Please enter job title and description.");
@@ -43,8 +52,7 @@ export default function InterviewPrepScreen() {
     }
     setLoading(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const base = domain ? `https://${domain}` : "";
+      const base = getApiBaseUrl();
       const { supabase } = await import("@/lib/supabase");
       const { data } = await supabase.auth.getSession();
       const res = await fetch(`${base}/api/ai/interview-questions`, {

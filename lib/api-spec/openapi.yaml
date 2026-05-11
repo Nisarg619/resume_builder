@@ -553,6 +553,48 @@ components:
         - degree
         - institution
 
+    Project:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        link:
+          type: string
+        technologies:
+          type: array
+          items:
+            type: string
+      required:
+        - title
+        - description
+
+    Certification:
+      type: object
+      properties:
+        name:
+          type: string
+        issuer:
+          type: string
+        date:
+          type: string
+      required:
+        - name
+        - issuer
+
+    Achievement:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+      required:
+        - title
+
     ResumeData:
       type: object
       properties:
@@ -588,6 +630,18 @@ components:
           type: array
           items:
             type: string
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+        certifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Certification"
+        achievements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Achievement"
         template:
           type: string
           enum: [modern, classic, minimal, creative]

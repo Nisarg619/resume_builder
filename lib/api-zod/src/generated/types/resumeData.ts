@@ -5,7 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { Achievement } from "./achievement";
+import type { Certification } from "./certification";
 import type { Education } from "./education";
+import type { Project } from "./project";
 import type { ResumeDataPersonalInfo } from "./resumeDataPersonalInfo";
 import type { ResumeDataTemplate } from "./resumeDataTemplate";
 import type { WorkExperience } from "./workExperience";
@@ -16,5 +19,8 @@ export interface ResumeData {
   workExperience?: WorkExperience[];
   education?: Education[];
   skills?: string[];
+  projects?: Project[];
+  certifications?: Certification[];
+  achievements?: Achievement[];
   template?: ResumeDataTemplate;
 }

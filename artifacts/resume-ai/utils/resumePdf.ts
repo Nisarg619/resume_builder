@@ -36,6 +36,20 @@ export function buildResumeHtml(resume: ResumeData, title: string): string {
     )
     .join("");
 
+  const projHtml = (resume.projects || [])
+    .map(
+      (p) => `
+      <div class="entry">
+        <div class="entry-header">
+          <span class="entry-title">${p.title}</span>
+          ${p.link ? `<span class="entry-date">${p.link}</span>` : ""}
+        </div>
+        ${p.technologies?.length ? `<div class="entry-sub">Tech: ${p.technologies.join(", ")}</div>` : ""}
+        ${p.description ? `<p class="summary" style="margin-top: 4px">${p.description}</p>` : ""}
+      </div>`
+    )
+    .join("");
+
   const eduHtml = education
     .map(
       (e) => `
@@ -45,6 +59,32 @@ export function buildResumeHtml(resume: ResumeData, title: string): string {
           <span class="entry-date">${e.graduationYear}</span>
         </div>
         <div class="entry-sub">${e.institution}${e.location ? `, ${e.location}` : ""}${e.gpa ? ` · GPA: ${e.gpa}` : ""}</div>
+      </div>`
+    )
+    .join("");
+
+  const certHtml = (resume.certifications || [])
+    .map(
+      (c) => `
+      <div class="entry" style="margin-bottom: 6px;">
+        <div class="entry-header">
+          <span class="entry-title">${c.name}</span>
+          <span class="entry-date">${c.date}</span>
+        </div>
+        <div class="entry-sub">${c.issuer}</div>
+      </div>`
+    )
+    .join("");
+
+  const achHtml = (resume.achievements || [])
+    .map(
+      (a) => `
+      <div class="entry" style="margin-bottom: 6px;">
+        <div class="entry-header">
+          <span class="entry-title">${a.title}</span>
+          <span class="entry-date">${a.date}</span>
+        </div>
+        ${a.description ? `<p class="summary" style="margin-top: 2px">${a.description}</p>` : ""}
       </div>`
     )
     .join("");
@@ -77,7 +117,10 @@ export function buildResumeHtml(resume: ResumeData, title: string): string {
   ${contacts ? `<div class="contacts">${contacts}</div>` : ""}
   ${summary ? `<div class="section-title">Summary</div><p class="summary">${summary}</p>` : ""}
   ${workExperience.length ? `<div class="section-title">Experience</div>${expHtml}` : ""}
+  ${resume.projects?.length ? `<div class="section-title">Projects</div>${projHtml}` : ""}
   ${education.length ? `<div class="section-title">Education</div>${eduHtml}` : ""}
+  ${resume.certifications?.length ? `<div class="section-title">Certifications</div>${certHtml}` : ""}
+  ${resume.achievements?.length ? `<div class="section-title">Achievements</div>${achHtml}` : ""}
   ${skills.length ? `<div class="section-title">Skills</div><p class="skills">${skills.join("  ·  ")}</p>` : ""}
 </body>
 </html>`;

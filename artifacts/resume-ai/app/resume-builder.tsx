@@ -10,12 +10,13 @@ import {
   Platform,
   Switch,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
-import { useResume, type WorkExperience, type Education, type ResumeTemplate } from "@/context/ResumeContext";
+import { useResume, type WorkExperience, type Education, type Project, type Certification, type Achievement, type ResumeTemplate } from "@/context/ResumeContext";
 import { StyledButton } from "@/components/StyledButton";
 import { Card } from "@/components/Card";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -23,8 +24,9 @@ import { useGetResume, useCreateResume, useUpdateResume } from "@workspace/api-c
 import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { downloadResumePdf } from "@/utils/resumePdf";
+import { getApiBaseUrl } from "@/lib/baseUrl";
 
-const STEPS = ["Personal", "Experience", "Education", "Skills", "Preview"];
+const STEPS = ["Personal", "Experience", "Education", "Projects", "Extra", "Skills", "Preview"];
 const TEMPLATES: { id: ResumeTemplate; label: string; color: string }[] = [
   { id: "modern", label: "Modern", color: "#1A237E" },
   { id: "classic", label: "Classic", color: "#212121" },
@@ -61,13 +63,43 @@ export default function ResumeBuilderScreen() {
       const resume = existingResume as any;
       const resumeData = resume.data ?? resume;
       if (resumeData && typeof resumeData === "object" && "personalInfo" in resumeData) {
-        setCurrentResume(resumeData);
+        // Ensure new arrays exist in legacy data
+        setCurrentResume({
+          ...resumeData,
+          projects: resumeData.projects || [],
+          certifications: resumeData.certifications || [],
+          achievements: resumeData.achievements || []
+        });
         setSkillsText(Array.isArray(resumeData.skills) ? resumeData.skills.join(", ") : "");
       }
       setResumeTitle(resume.title ?? "My Resume");
       setInitialized(true);
     }
   }, [existingResume, id, initialized]);
+
+  // Sync skills text to state
+  useEffect(() => {
+    const skills = skillsText.split(",").map(s => s.trim()).filter(Boolean);
+    if (JSON.stringify(skills) !== JSON.stringify(currentResume.skills)) {
+      setCurrentResume(prev => ({ ...prev, skills }));
+    }
+  }, [skillsText]);
+
+  // Auto-Save
+  useEffect(() => {
+    if (!initialized || !currentResume.personalInfo.fullName) return;
+    const timer = setTimeout(() => {
+      if (id) {
+        updateMutation.mutate({ id, data: { title: resumeTitle, data: currentResume as any } });
+      } else {
+        createMutation.mutate(
+          { data: { title: resumeTitle, data: currentResume as any } },
+          { onSuccess: (res: any) => router.setParams({ id: res.id }) }
+        );
+      }
+    }, 5000); // 5 seconds for less frequent API hits
+    return () => clearTimeout(timer);
+  }, [currentResume, resumeTitle]);
 
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
@@ -83,8 +115,7 @@ export default function ResumeBuilderScreen() {
     }
     setAiLoading(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const base = domain ? `https://${domain}` : "";
+      const base = getApiBaseUrl();
       const { supabase } = await import("@/lib/supabase");
       const { data } = await supabase.auth.getSession();
       const res = await fetch(`${base}/api/ai/resume-summary`, {
@@ -141,8 +172,7 @@ export default function ResumeBuilderScreen() {
     }
     setAiLoading(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const base = domain ? `https://${domain}` : "";
+      const base = getApiBaseUrl();
       const { supabase } = await import("@/lib/supabase");
       const { data } = await supabase.auth.getSession();
       const res = await fetch(`${base}/api/ai/job-bullets`, {
@@ -184,6 +214,57 @@ export default function ResumeBuilderScreen() {
     const updated = [...currentResume.education];
     updated[idx] = { ...updated[idx]!, [key]: val };
     setCurrentResume({ ...currentResume, education: updated });
+  };
+
+  const addProject = () => {
+    setCurrentResume({
+      ...currentResume,
+      projects: [...currentResume.projects, { title: "", description: "", link: "", technologies: [] }]
+    });
+  };
+
+  const updateProject = (idx: number, key: keyof Project, val: unknown) => {
+    const updated = [...currentResume.projects];
+    updated[idx] = { ...updated[idx]!, [key]: val };
+    setCurrentResume({ ...currentResume, projects: updated });
+  };
+
+  const removeProject = (idx: number) => {
+    setCurrentResume({ ...currentResume, projects: currentResume.projects.filter((_, i) => i !== idx) });
+  };
+
+  const addCertification = () => {
+    setCurrentResume({
+      ...currentResume,
+      certifications: [...currentResume.certifications, { name: "", issuer: "", date: "" }]
+    });
+  };
+
+  const updateCertification = (idx: number, key: keyof Certification, val: string) => {
+    const updated = [...currentResume.certifications];
+    updated[idx] = { ...updated[idx]!, [key]: val };
+    setCurrentResume({ ...currentResume, certifications: updated });
+  };
+
+  const removeCertification = (idx: number) => {
+    setCurrentResume({ ...currentResume, certifications: currentResume.certifications.filter((_, i) => i !== idx) });
+  };
+
+  const addAchievement = () => {
+    setCurrentResume({
+      ...currentResume,
+      achievements: [...currentResume.achievements, { title: "", description: "", date: "" }]
+    });
+  };
+
+  const updateAchievement = (idx: number, key: keyof Achievement, val: string) => {
+    const updated = [...currentResume.achievements];
+    updated[idx] = { ...updated[idx]!, [key]: val };
+    setCurrentResume({ ...currentResume, achievements: updated });
+  };
+
+  const removeAchievement = (idx: number) => {
+    setCurrentResume({ ...currentResume, achievements: currentResume.achievements.filter((_, i) => i !== idx) });
   };
 
   const handleSave = async () => {
@@ -236,7 +317,11 @@ export default function ResumeBuilderScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <KeyboardAvoidingView 
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+    >
       <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
@@ -445,6 +530,142 @@ export default function ResumeBuilderScreen() {
 
         {step === 3 && (
           <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Projects</Text>
+            {currentResume.projects.map((proj, idx) => (
+              <Card key={idx} style={{ gap: 12, marginBottom: 16 }}>
+                <View style={styles.rowBetween}>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>Project {idx + 1}</Text>
+                  <TouchableOpacity onPress={() => removeProject(idx)}>
+                    <Feather name="trash-2" size={18} color={colors.destructive} />
+                  </TouchableOpacity>
+                </View>
+                {[
+                  { key: "title" as const, label: "Project Title*", placeholder: "E-Commerce App" },
+                  { key: "link" as const, label: "Link / GitHub", placeholder: "github.com/john/repo" },
+                ].map(({ key, label, placeholder }) => (
+                  <View key={key} style={styles.field}>
+                    <Text style={labelStyle}>{label}</Text>
+                    <TextInput
+                      style={inputStyle}
+                      placeholder={placeholder}
+                      placeholderTextColor={colors.mutedForeground}
+                      value={proj[key] as string}
+                      onChangeText={(v) => updateProject(idx, key, v)}
+                    />
+                  </View>
+                ))}
+                <View style={styles.field}>
+                  <Text style={labelStyle}>Technologies (comma separated)</Text>
+                  <TextInput
+                    style={inputStyle}
+                    placeholder="React, Node.js, MongoDB"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={proj.technologies.join(", ")}
+                    onChangeText={(v) => updateProject(idx, "technologies", v.split(",").map(t => t.trim()).filter(Boolean))}
+                  />
+                </View>
+                <View style={styles.field}>
+                  <Text style={labelStyle}>Description</Text>
+                  <TextInput
+                    style={[inputStyle, styles.textarea]}
+                    placeholder="What did you build? What problems did it solve?"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={proj.description}
+                    onChangeText={(v) => updateProject(idx, "description", v)}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.aiBtn, { backgroundColor: colors.secondary, borderRadius: 8, alignSelf: "flex-start" }]}
+                  onPress={async () => {
+                    if (!proj.description) {
+                      Alert.alert("Missing info", "Please enter a brief description first.");
+                      return;
+                    }
+                    setAiLoading(true);
+                    try {
+                      const base = getApiBaseUrl();
+                      const { supabase } = await import("@/lib/supabase");
+                      const { data } = await supabase.auth.getSession();
+                      const res = await fetch(`${base}/api/ai/job-bullets`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token}` },
+                        body: JSON.stringify({ jobTitle: `Project: ${proj.title}`, responsibilities: proj.description }),
+                      });
+                      if (res.ok) {
+                        const result = await res.json();
+                        updateProject(idx, "description", result.bullets.map((b: string) => `• ${b}`).join("\n"));
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      } else {
+                        Alert.alert("Error", "Failed to generate project bullets.");
+                      }
+                    } catch {
+                      Alert.alert("Error", "Failed to generate project bullets.");
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                >
+                  <Feather name="zap" size={14} color={colors.primary} />
+                  <Text style={[styles.aiBtnText, { color: colors.primary }]}>AI Enhance Description</Text>
+                </TouchableOpacity>
+              </Card>
+            ))}
+            <StyledButton
+              title="Add Project"
+              onPress={addProject}
+              variant="outline"
+              icon={<Feather name="plus" size={16} color={colors.primary} />}
+            />
+          </View>
+        )}
+
+        {step === 4 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Certifications & Achievements</Text>
+            
+            <View style={{ gap: 12, marginBottom: 24 }}>
+              <Text style={[styles.cardTitle, { color: colors.foreground }]}>Certifications</Text>
+              {currentResume.certifications.map((cert, idx) => (
+                <Card key={idx} style={{ gap: 12 }}>
+                  <View style={styles.rowBetween}>
+                    <Text style={[styles.label, { color: colors.primary }]}>Certification {idx + 1}</Text>
+                    <TouchableOpacity onPress={() => removeCertification(idx)}>
+                      <Feather name="x" size={18} color={colors.destructive} />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput style={inputStyle} placeholder="Name (e.g. AWS Certified Developer)" value={cert.name} onChangeText={(v) => updateCertification(idx, "name", v)} placeholderTextColor={colors.mutedForeground} />
+                  <TextInput style={inputStyle} placeholder="Issuer (e.g. Amazon)" value={cert.issuer} onChangeText={(v) => updateCertification(idx, "issuer", v)} placeholderTextColor={colors.mutedForeground} />
+                  <TextInput style={inputStyle} placeholder="Date (e.g. Jan 2023)" value={cert.date} onChangeText={(v) => updateCertification(idx, "date", v)} placeholderTextColor={colors.mutedForeground} />
+                </Card>
+              ))}
+              <StyledButton title="Add Certification" onPress={addCertification} variant="ghost" icon={<Feather name="plus" size={16} />} />
+            </View>
+
+            <View style={{ gap: 12 }}>
+              <Text style={[styles.cardTitle, { color: colors.foreground }]}>Achievements</Text>
+              {currentResume.achievements.map((ach, idx) => (
+                <Card key={idx} style={{ gap: 12 }}>
+                  <View style={styles.rowBetween}>
+                    <Text style={[styles.label, { color: colors.primary }]}>Achievement {idx + 1}</Text>
+                    <TouchableOpacity onPress={() => removeAchievement(idx)}>
+                      <Feather name="x" size={18} color={colors.destructive} />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput style={inputStyle} placeholder="Title (e.g. Employee of the Year)" value={ach.title} onChangeText={(v) => updateAchievement(idx, "title", v)} placeholderTextColor={colors.mutedForeground} />
+                  <TextInput style={inputStyle} placeholder="Date (e.g. 2022)" value={ach.date} onChangeText={(v) => updateAchievement(idx, "date", v)} placeholderTextColor={colors.mutedForeground} />
+                  <TextInput style={[inputStyle, { minHeight: 60 }]} multiline placeholder="Description" value={ach.description} onChangeText={(v) => updateAchievement(idx, "description", v)} placeholderTextColor={colors.mutedForeground} />
+                </Card>
+              ))}
+              <StyledButton title="Add Achievement" onPress={addAchievement} variant="ghost" icon={<Feather name="plus" size={16} />} />
+            </View>
+          </View>
+        )}
+
+        {step === 5 && (
+          <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Skills & Template</Text>
             <View style={styles.field}>
               <Text style={labelStyle}>Skills (comma separated)</Text>
@@ -496,7 +717,7 @@ export default function ResumeBuilderScreen() {
           </View>
         )}
 
-        {step === 4 && (
+        {step === 6 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Preview & Save</Text>
             <Card elevated style={{ gap: 12 }}>
@@ -546,7 +767,49 @@ export default function ResumeBuilderScreen() {
                   ))}
                 </View>
               )}
-              {currentResume.skills.length > 0 && (
+              {currentResume.projects?.length > 0 && (
+                <View>
+                  <Text style={[styles.previewSection, { color: colors.primary }]}>PROJECTS</Text>
+                  {currentResume.projects.map((p, i) => (
+                    <View key={i} style={{ marginBottom: 8 }}>
+                      <Text style={[styles.previewJob, { color: colors.foreground }]}>
+                        {p.title} {p.link ? `· ${p.link}` : ""}
+                      </Text>
+                      {p.technologies?.length > 0 && (
+                        <Text style={[styles.previewDate, { color: colors.mutedForeground }]}>
+                          Tech: {p.technologies.join(", ")}
+                        </Text>
+                      )}
+                      <Text style={[styles.previewSummary, { color: colors.foreground }]}>{p.description}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              {currentResume.certifications?.length > 0 && (
+                <View>
+                  <Text style={[styles.previewSection, { color: colors.primary }]}>CERTIFICATIONS</Text>
+                  {currentResume.certifications.map((c, i) => (
+                    <View key={i} style={{ marginBottom: 4 }}>
+                      <Text style={[styles.previewJob, { color: colors.foreground }]}>{c.name}</Text>
+                      <Text style={[styles.previewDate, { color: colors.mutedForeground }]}>
+                        {c.issuer} {c.date ? `· ${c.date}` : ""}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              {currentResume.achievements?.length > 0 && (
+                <View>
+                  <Text style={[styles.previewSection, { color: colors.primary }]}>ACHIEVEMENTS</Text>
+                  {currentResume.achievements.map((a, i) => (
+                    <View key={i} style={{ marginBottom: 4 }}>
+                      <Text style={[styles.previewJob, { color: colors.foreground }]}>{a.title}</Text>
+                      <Text style={[styles.previewSummary, { color: colors.foreground }]}>{a.description}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              {currentResume.skills?.length > 0 && (
                 <View>
                   <Text style={[styles.previewSection, { color: colors.primary }]}>SKILLS</Text>
                   <Text style={[styles.previewSkills, { color: colors.foreground }]}>
@@ -591,7 +854,7 @@ export default function ResumeBuilderScreen() {
       </ScrollView>
 
       <LoadingOverlay visible={aiLoading} />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

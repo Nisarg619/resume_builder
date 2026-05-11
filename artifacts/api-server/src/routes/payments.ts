@@ -4,12 +4,19 @@ import crypto from "crypto";
 import { authMiddleware, type AuthenticatedRequest } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq } from "@workspace/db";
+import { success, badRequest, serverError, requireFields, serializeUser } from "../lib/responses.js";
 
-const razorpay = new Razorpay({
-  key_id: process.env["RAZORPAY_KEY_ID"]!,
-  key_secret: process.env["RAZORPAY_KEY_SECRET"]!,
-});
+let _razorpay: Razorpay | null = null;
+function getRazorpay(): Razorpay {
+  if (!_razorpay) {
+    const keyId = process.env["RAZORPAY_KEY_ID"];
+    const keySecret = process.env["RAZORPAY_KEY_SECRET"];
+    if (!keyId || !keySecret) throw new Error("Razorpay credentials not configured");
+    _razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+  }
+  return _razorpay;
+}
 
 const PLAN_AMOUNTS = {
   monthly: 9900,
@@ -19,21 +26,30 @@ const PLAN_AMOUNTS = {
 const router = Router();
 
 router.post("/payments/create-order", authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const { plan } = req.body as { plan: "monthly" | "yearly" };
+  const check = requireFields<{ plan: "monthly" | "yearly" }>(req.body, ["plan"]);
+  if (!check.valid) {
+    badRequest(res, `Missing required fields: ${check.missing.join(", ")}`);
+    return;
+  }
+  const { plan } = check.data;
 
-  if (!plan || !PLAN_AMOUNTS[plan]) {
-    res.status(400).json({ error: "Invalid plan" });
+  if (!PLAN_AMOUNTS[plan]) {
+    badRequest(res, "Invalid plan. Must be 'monthly' or 'yearly'.");
     return;
   }
 
   try {
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount: PLAN_AMOUNTS[plan],
       currency: "INR",
-      receipt: `receipt_${req.userId}_${Date.now()}`,
+      receipt: `receipt_${req.user.id}_${Date.now()}`,
+      notes: {
+        userId: req.user.id,
+        plan: plan,
+      },
     });
 
-    res.json({
+    success(res, {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
@@ -41,17 +57,24 @@ router.post("/payments/create-order", authMiddleware, async (req: AuthenticatedR
     });
   } catch (err) {
     req.log.error({ err }, "Create payment order error");
-    res.status(500).json({ error: "Failed to create payment order" });
+    serverError(res, "Failed to create payment order");
   }
 });
 
 router.post("/payments/verify", authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, plan } = req.body as {
+  const check = requireFields<{
     razorpayOrderId: string;
     razorpayPaymentId: string;
     razorpaySignature: string;
     plan: "monthly" | "yearly";
-  };
+  }>(req.body, ["razorpayOrderId", "razorpayPaymentId", "razorpaySignature", "plan"]);
+  
+  if (!check.valid) {
+    badRequest(res, `Missing required fields: ${check.missing.join(", ")}`);
+    return;
+  }
+
+  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, plan } = check.data;
 
   const body = `${razorpayOrderId}|${razorpayPaymentId}`;
   const expectedSignature = crypto
@@ -60,7 +83,7 @@ router.post("/payments/verify", authMiddleware, async (req: AuthenticatedRequest
     .digest("hex");
 
   if (expectedSignature !== razorpaySignature) {
-    res.status(400).json({ error: "Invalid payment signature" });
+    badRequest(res, "Invalid payment signature");
     return;
   }
 
@@ -75,23 +98,100 @@ router.post("/payments/verify", authMiddleware, async (req: AuthenticatedRequest
     const [updated] = await db
       .update(usersTable)
       .set({ plan: "pro", subscriptionExpiresAt: expiresAt, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.userId!))
+      .where(eq(usersTable.id, req.user.id))
       .returning();
 
-    res.json({
-      id: updated!.id,
-      email: updated!.email,
-      name: updated!.name,
-      avatarUrl: updated!.avatarUrl,
-      plan: updated!.plan,
-      usageResumeCount: updated!.usageResumeCount,
-      usageCoverLetterCount: updated!.usageCoverLetterCount,
-      subscriptionExpiresAt: updated!.subscriptionExpiresAt?.toISOString() ?? null,
-      createdAt: updated!.createdAt.toISOString(),
-    });
+    success(res, serializeUser(updated!));
   } catch (err) {
     req.log.error({ err }, "Verify payment error");
-    res.status(500).json({ error: "Failed to update subscription" });
+    serverError(res, "Failed to update subscription");
+  }
+});
+
+router.post("/payments/webhook", async (req, res) => {
+  const signature = req.headers["x-razorpay-signature"] as string;
+  const secret = process.env["RAZORPAY_WEBHOOK_SECRET"];
+
+  if (!secret) {
+    req.log.error("RAZORPAY_WEBHOOK_SECRET is not configured");
+    res.status(500).send("Webhook secret missing");
+    return;
+  }
+
+  // Verify signature
+  const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+
+  if (expectedSignature !== signature) {
+    req.log.warn("Invalid webhook signature");
+    res.status(400).send("Invalid signature");
+    return;
+  }
+
+  const event = req.body.event;
+  const payload = req.body.payload;
+
+  req.log.info({ event }, "Razorpay Webhook received");
+
+  try {
+    if (event === "order.paid" || event === "payment.captured") {
+      const orderId = payload.order?.entity?.id || payload.payment?.entity?.order_id;
+      const notes = payload.order?.entity?.notes || payload.payment?.entity?.notes;
+      
+      // We usually store the plan in notes or we can fetch the order details
+      const userId = notes?.userId;
+      const plan = notes?.plan as "monthly" | "yearly";
+
+      if (userId && plan) {
+        const expiresAt = new Date();
+        if (plan === "monthly") {
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        } else {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        }
+
+        await db
+          .update(usersTable)
+          .set({ plan: "pro", subscriptionExpiresAt: expiresAt, updatedAt: new Date() })
+          .where(eq(usersTable.id, userId));
+          
+        req.log.info({ userId, plan }, "Subscription updated via webhook");
+      }
+    }
+
+    res.json({ status: "ok" });
+  } catch (err) {
+    req.log.error({ err }, "Webhook processing error");
+    res.status(500).send("Error processing webhook");
+  }
+});
+
+router.get("/payments/status", authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const [user] = await db
+      .select({ 
+        plan: usersTable.plan, 
+        subscriptionExpiresAt: usersTable.subscriptionExpiresAt 
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user.id));
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    success(res, {
+      plan: user.plan,
+      expiresAt: user.subscriptionExpiresAt,
+      isPro: user.plan === "pro",
+    });
+  } catch (err) {
+    req.log.error({ err }, "Get payment status error");
+    serverError(res);
   }
 });
 

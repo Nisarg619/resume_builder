@@ -2,7 +2,12 @@ import { Router } from "express";
 import { authMiddleware, type AuthenticatedRequest } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
 import { resumesTable, usersTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "@workspace/db";
+import {
+  success, created, noContent, badRequest, notFound, forbidden, serverError,
+  requireFields, serializeResume,
+} from "../lib/responses.js";
+import { sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -11,56 +16,52 @@ router.get("/resumes", authMiddleware, async (req: AuthenticatedRequest, res) =>
     const resumes = await db
       .select()
       .from(resumesTable)
-      .where(eq(resumesTable.userId, req.userId!))
-      .orderBy(resumesTable.updatedAt);
+      .where(eq(resumesTable.userId, req.user.id))
+      .orderBy(desc(resumesTable.updatedAt));
 
-    res.json(
-      resumes.reverse().map((r) => ({
-        id: r.id,
-        userId: r.userId,
-        title: r.title,
-        data: r.data,
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-      }))
-    );
+    success(res, resumes.map(serializeResume));
   } catch (err) {
     req.log.error({ err }, "List resumes error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
 router.post("/resumes", authMiddleware, async (req: AuthenticatedRequest, res) => {
-  const { title, data } = req.body as { title: string; data: unknown };
+  const check = requireFields<{ title: string; data: unknown }>(req.body, ["title", "data"]);
+  if (!check.valid) {
+    badRequest(res, `Missing required fields: ${check.missing.join(", ")}`);
+    return;
+  }
+  const { title, data } = check.data;
 
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
+    // Quota Check for Free users
+    if (req.user.plan === "free") {
+      const [user] = await db.select({ usageResumeCount: usersTable.usageResumeCount }).from(usersTable).where(eq(usersTable.id, req.user.id));
+      if (user && user.usageResumeCount >= 3) {
+        forbidden(res, "Resume limit reached. Upgrade to Pro for unlimited resumes.", "LIMIT_REACHED");
+        return;
+      }
     }
 
     const [resume] = await db
       .insert(resumesTable)
-      .values({ userId: req.userId!, title, data: data as Record<string, unknown> })
+      .values({ userId: req.user.id, title: (title || "Untitled Resume").trim(), data: data as Record<string, unknown> })
       .returning();
 
+    // Increment usage count atomically
     await db
       .update(usersTable)
-      .set({ usageResumeCount: user.usageResumeCount + 1, updatedAt: new Date() })
-      .where(eq(usersTable.id, req.userId!));
+      .set({ 
+        usageResumeCount: sql`${usersTable.usageResumeCount} + 1`, 
+        updatedAt: new Date() 
+      })
+      .where(eq(usersTable.id, req.user.id));
 
-    res.status(201).json({
-      id: resume!.id,
-      userId: resume!.userId,
-      title: resume!.title,
-      data: resume!.data,
-      createdAt: resume!.createdAt.toISOString(),
-      updatedAt: resume!.updatedAt.toISOString(),
-    });
+    created(res, serializeResume(resume!));
   } catch (err) {
     req.log.error({ err }, "Create resume error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
@@ -70,68 +71,57 @@ router.get("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res
     const [resume] = await db
       .select()
       .from(resumesTable)
-      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.userId!)));
+      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.user.id)));
 
-    if (!resume) {
-      res.status(404).json({ error: "Resume not found" });
-      return;
-    }
+    if (!resume) { notFound(res, "Resume"); return; }
 
-    res.json({
-      id: resume.id,
-      userId: resume.userId,
-      title: resume.title,
-      data: resume.data,
-      createdAt: resume.createdAt.toISOString(),
-      updatedAt: resume.updatedAt.toISOString(),
-    });
+    success(res, serializeResume(resume));
   } catch (err) {
     req.log.error({ err }, "Get resume error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
 router.put("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
   const id = req.params["id"] as string;
-  const { title, data } = req.body as { title: string; data: unknown };
+  const { title, data } = (req.body ?? {}) as { title?: string; data?: unknown };
+
+  if (!title && !data) {
+    badRequest(res, "At least one of title or data must be provided");
+    return;
+  }
 
   try {
+    const updateSet: Record<string, unknown> = { updatedAt: new Date() };
+    if (title !== undefined) updateSet.title = title;
+    if (data !== undefined) updateSet.data = data as Record<string, unknown>;
+
     const [resume] = await db
       .update(resumesTable)
-      .set({ title, data: data as Record<string, unknown>, updatedAt: new Date() })
-      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.userId!)))
+      .set(updateSet)
+      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.user.id)))
       .returning();
 
-    if (!resume) {
-      res.status(404).json({ error: "Resume not found" });
-      return;
-    }
+    if (!resume) { notFound(res, "Resume"); return; }
 
-    res.json({
-      id: resume.id,
-      userId: resume.userId,
-      title: resume.title,
-      data: resume.data,
-      createdAt: resume.createdAt.toISOString(),
-      updatedAt: resume.updatedAt.toISOString(),
-    });
+    success(res, serializeResume(resume));
   } catch (err) {
     req.log.error({ err }, "Update resume error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 
 router.delete("/resumes/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
   const id = req.params["id"] as string;
   try {
-    await db
+    const result = await db
       .delete(resumesTable)
-      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.userId!)));
+      .where(and(eq(resumesTable.id, id), eq(resumesTable.userId, req.user.id)));
 
-    res.status(204).send();
+    noContent(res);
   } catch (err) {
     req.log.error({ err }, "Delete resume error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 

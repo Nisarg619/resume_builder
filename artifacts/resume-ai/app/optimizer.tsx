@@ -17,6 +17,7 @@ import { StyledButton } from "@/components/StyledButton";
 import { Card } from "@/components/Card";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import * as Haptics from "expo-haptics";
+import { getApiBaseUrl } from "@/lib/baseUrl";
 
 interface OptimizeResult {
   atsScore: number;
@@ -27,6 +28,7 @@ interface OptimizeResult {
 export default function OptimizerScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { profile } = useAuth();
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [result, setResult] = useState<OptimizeResult | null>(null);
@@ -35,6 +37,13 @@ export default function OptimizerScreen() {
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
 
+  React.useEffect(() => {
+    if (profile && profile.plan !== "pro") {
+      router.replace("/(tabs)");
+      Alert.alert("Pro Feature", "Resume Optimizer is available only for Pro members.");
+    }
+  }, [profile]);
+
   const analyze = async () => {
     if (!resumeText || !jobDescription) {
       Alert.alert("Missing info", "Please paste both your resume and the job description.");
@@ -42,8 +51,7 @@ export default function OptimizerScreen() {
     }
     setLoading(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const base = domain ? `https://${domain}` : "";
+      const base = getApiBaseUrl();
       const { supabase } = await import("@/lib/supabase");
       const { data } = await supabase.auth.getSession();
       const res = await fetch(`${base}/api/ai/optimize-resume`, {

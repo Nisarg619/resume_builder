@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { View, ActivityIndicator } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,7 +17,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ResumeProvider } from "@/context/ResumeContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { setupApi } from "@/lib/api";
+import { useColors } from "@/hooks/useColors";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,6 +36,7 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const navState = useRootNavigationState();
+  const colors = useColors();
 
   useEffect(() => {
     if (!navState?.key || loading) return;
@@ -45,6 +49,15 @@ function RootLayoutNav() {
     }
   }, [session, loading, segments, navState?.key]);
 
+  // Show a themed loading indicator while auth state resolves
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" />
@@ -54,6 +67,7 @@ function RootLayoutNav() {
       <Stack.Screen name="optimizer" options={{ presentation: "modal" }} />
       <Stack.Screen name="interview-prep" options={{ presentation: "modal" }} />
       <Stack.Screen name="upload-resume" options={{ presentation: "modal" }} />
+      <Stack.Screen name="ats-analyzer" options={{ presentation: "modal" }} />
     </Stack>
   );
 }
@@ -82,7 +96,9 @@ export default function RootLayout() {
             <ResumeProvider>
               <GestureHandlerRootView style={{ flex: 1 }}>
                 <KeyboardProvider>
-                  <RootLayoutNav />
+                  <ToastProvider>
+                    <RootLayoutNav />
+                  </ToastProvider>
                 </KeyboardProvider>
               </GestureHandlerRootView>
             </ResumeProvider>

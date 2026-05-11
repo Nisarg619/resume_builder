@@ -1,5 +1,6 @@
 import React from "react";
-import { View, StyleSheet, type ViewStyle } from "react-native";
+import { View, StyleSheet, type ViewStyle, useColorScheme } from "react-native";
+import { BlurView } from "expo-blur";
 import { useColors } from "@/hooks/useColors";
 
 interface CardProps {
@@ -11,34 +12,50 @@ interface CardProps {
 
 export function Card({ children, style, elevated = false, noPadding = false }: CardProps) {
   const colors = useColors();
+  const scheme = useColorScheme() ?? "light";
+  
   return (
     <View
       style={[
         styles.card,
         {
-          backgroundColor: colors.card,
           borderRadius: colors.radius,
-          borderColor: colors.border,
-          shadowColor: elevated ? "#1A237E" : "#000",
-          shadowOpacity: elevated ? 0.1 : 0.04,
-          shadowRadius: elevated ? 12 : 4,
-          elevation: elevated ? 6 : 1,
+          shadowColor: elevated ? colors.primary : "#000",
+          shadowOpacity: elevated ? 0.15 : 0.05,
+          shadowRadius: elevated ? 16 : 8,
+          elevation: elevated ? 8 : 2,
+          overflow: "hidden",
         },
-        !noPadding && styles.padding,
         style,
       ]}
     >
-      {children}
+      <BlurView
+        tint={scheme === "dark" ? "systemChromeMaterialDark" : "systemChromeMaterialLight"}
+        intensity={80}
+        style={[
+          styles.blurContent,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.glassBorder,
+            borderWidth: 1,
+          },
+          !noPadding && styles.padding,
+        ]}
+      >
+        {children}
+      </BlurView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
+  },
+  blurContent: {
+    flex: 1,
   },
   padding: {
-    padding: 16,
+    padding: 20,
   },
 });

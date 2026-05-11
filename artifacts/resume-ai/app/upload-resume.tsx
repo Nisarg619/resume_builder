@@ -16,9 +16,12 @@ import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { useColors } from "@/hooks/useColors";
 import { useResume } from "@/context/ResumeContext";
+import { useAuth } from "@/context/AuthContext";
 import { StyledButton } from "@/components/StyledButton";
 import { Card } from "@/components/Card";
+import { PremiumModal } from "@/components/PremiumModal";
 import { supabase } from "@/lib/supabase";
+import { getApiBaseUrl } from "@/lib/baseUrl";
 
 type Step = "upload" | "boost" | "done";
 
@@ -35,8 +38,10 @@ export default function UploadResumeScreen() {
   const [parsedData, setParsedData] = useState<Record<string, unknown> | null>(null);
   const [improvements, setImprovements] = useState<string[]>([]);
   const [estimatedScore, setEstimatedScore] = useState(0);
+  const [proModalVisible, setProModalVisible] = useState(false);
 
   const isWeb = Platform.OS === "web";
+  const { profile } = useAuth();
   const topPad = isWeb ? 67 : insets.top;
 
   const pickFile = async () => {
@@ -60,8 +65,7 @@ export default function UploadResumeScreen() {
     }
     setParsing(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const base = domain ? `https://${domain}` : "";
+      const base = getApiBaseUrl();
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
@@ -101,11 +105,14 @@ export default function UploadResumeScreen() {
   };
 
   const boostATS = async () => {
+    if (profile?.plan !== "pro") {
+      setProModalVisible(true);
+      return;
+    }
     if (!parsedData) return;
     setBoosting(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const base = domain ? `https://${domain}` : "";
+      const base = getApiBaseUrl();
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
@@ -150,6 +157,11 @@ export default function UploadResumeScreen() {
   };
 
   const loadIntoBuilder = (data: Record<string, unknown>) => {
+    // Quota check before entering builder
+    if (profile?.plan === "free" && (profile.usageResumeCount ?? 0) >= 3) {
+      setProModalVisible(true);
+      return;
+    }
     setCurrentResume(data as unknown as Parameters<typeof setCurrentResume>[0]);
     const name = (data.personalInfo as { fullName?: string })?.fullName;
     setResumeTitle(name ? `${name}'s Resume` : "Uploaded Resume");
@@ -359,6 +371,11 @@ export default function UploadResumeScreen() {
           </View>
         )}
       </ScrollView>
+      <PremiumModal 
+        visible={proModalVisible} 
+        onClose={() => setProModalVisible(false)} 
+        onSuccess={() => setProModalVisible(false)} 
+      />
     </View>
   );
 }

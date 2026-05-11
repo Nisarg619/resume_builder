@@ -1,14 +1,20 @@
 import React from "react";
 import {
-  TouchableOpacity,
   Text,
   StyleSheet,
   ActivityIndicator,
   View,
+  Pressable,
   type ViewStyle,
   type TextStyle,
 } from "react-native";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring 
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useColors } from "@/hooks/useColors";
 
 interface StyledButtonProps {
@@ -22,6 +28,7 @@ interface StyledButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   fullWidth?: boolean;
+  accessibilityLabel?: string;
 }
 
 export function StyledButton({
@@ -35,18 +42,31 @@ export function StyledButton({
   style,
   textStyle,
   fullWidth = false,
+  accessibilityLabel,
 }: StyledButtonProps) {
   const colors = useColors();
+  const scale = useSharedValue(1);
 
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    if (!disabled && !loading) {
+      scale.value = withSpring(0.96, { damping: 10, stiffness: 200 });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
   };
 
   const getButtonStyle = (): ViewStyle => {
     switch (variant) {
       case "primary":
-        return { backgroundColor: colors.primary };
+      case "pro":
+        return { backgroundColor: "transparent", borderWidth: 0 };
       case "secondary":
         return { backgroundColor: colors.secondary };
       case "outline":
@@ -55,10 +75,8 @@ export function StyledButton({
         return { backgroundColor: "transparent" };
       case "danger":
         return { backgroundColor: colors.destructive };
-      case "pro":
-        return { backgroundColor: colors.accent };
       default:
-        return { backgroundColor: colors.primary };
+        return { backgroundColor: "transparent" };
     }
   };
 
@@ -69,9 +87,7 @@ export function StyledButton({
       case "pro":
         return { color: "#FFFFFF" };
       case "secondary":
-        return { color: colors.primary };
       case "outline":
-        return { color: colors.primary };
       case "ghost":
         return { color: colors.primary };
       default:
@@ -79,20 +95,13 @@ export function StyledButton({
     }
   };
 
-  return (
-    <TouchableOpacity
-      style={[
-        styles.button,
-        getButtonStyle(),
-        { borderRadius: colors.radius },
-        fullWidth && styles.fullWidth,
-        (disabled || loading) && styles.disabled,
-        style,
-      ]}
-      onPress={handlePress}
-      disabled={disabled || loading}
-      activeOpacity={0.8}
-    >
+  const isGradient = variant === "primary" || variant === "pro";
+  const gradientColors = variant === "pro" 
+    ? [colors.accent, "#EA580C"] 
+    : [colors.primary, colors.tint];
+
+  const content = (
+    <>
       {loading ? (
         <ActivityIndicator
           color={variant === "outline" || variant === "ghost" || variant === "secondary" ? colors.primary : "#fff"}
@@ -105,11 +114,52 @@ export function StyledButton({
           {iconRight && <View style={styles.iconRight}>{iconRight}</View>}
         </View>
       )}
-    </TouchableOpacity>
+    </>
+  );
+
+  return (
+    <Animated.View style={[styles.container, fullWidth && styles.fullWidth, animatedStyle]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel || title}
+        accessibilityState={{ disabled: disabled || loading }}
+        style={({ pressed }) => [
+          styles.button,
+          getButtonStyle(),
+          { borderRadius: colors.radius },
+          (disabled || loading) && styles.disabled,
+          style,
+          isGradient && { paddingHorizontal: 0, paddingVertical: 0 }
+        ]}
+      >
+        {isGradient ? (
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.gradient, { borderRadius: colors.radius }]}
+          >
+            {content}
+          </LinearGradient>
+        ) : (
+          content
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    alignSelf: "center",
+  },
+  fullWidth: {
+    width: "100%",
+  },
   button: {
     paddingHorizontal: 20,
     paddingVertical: 14,
@@ -117,7 +167,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 50,
   },
-  fullWidth: { width: "100%" },
+  gradient: {
+    width: "100%",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 50,
+  },
   disabled: { opacity: 0.55 },
   content: {
     flexDirection: "row",
@@ -132,3 +189,4 @@ const styles = StyleSheet.create({
   iconLeft: { marginRight: 2 },
   iconRight: { marginLeft: 2 },
 });
+

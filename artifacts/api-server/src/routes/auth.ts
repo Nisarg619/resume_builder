@@ -1,23 +1,32 @@
 import { Router } from "express";
-import { supabase } from "../lib/supabase.js";
+import { supabase, isSupabaseConfigured } from "../lib/supabase.js";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq } from "@workspace/db";
+import { success, badRequest, serverError, serializeUser, unauthorized } from "../lib/responses.js";
 
 const router = Router();
 
 router.post("/auth/verify", async (req, res) => {
   const { token } = req.body as { token: string };
 
+  if (!isSupabaseConfigured || !supabase) {
+    res.status(503).json({
+      error:
+        "Auth is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY).",
+    });
+    return;
+  }
+
   if (!token) {
-    res.status(400).json({ error: "Token required" });
+    badRequest(res, "Token required");
     return;
   }
 
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
-      res.status(401).json({ error: "Invalid token" });
+      unauthorized(res, "Invalid token");
       return;
     }
 
@@ -44,7 +53,7 @@ router.post("/auth/verify", async (req, res) => {
           usageResetDate: firstOfMonth,
         })
         .returning();
-      dbUser = inserted;
+      dbUser = inserted!;
     } else {
       dbUser = existing[0]!;
       if (dbUser.usageResetDate && dbUser.usageResetDate < firstOfMonth) {
@@ -57,20 +66,10 @@ router.post("/auth/verify", async (req, res) => {
       }
     }
 
-    res.json({
-      id: dbUser.id,
-      email: dbUser.email,
-      name: dbUser.name,
-      avatarUrl: dbUser.avatarUrl,
-      plan: dbUser.plan,
-      usageResumeCount: dbUser.usageResumeCount,
-      usageCoverLetterCount: dbUser.usageCoverLetterCount,
-      subscriptionExpiresAt: dbUser.subscriptionExpiresAt?.toISOString() ?? null,
-      createdAt: dbUser.createdAt.toISOString(),
-    });
+    success(res, serializeUser(dbUser));
   } catch (err) {
     req.log.error({ err }, "Auth verify error");
-    res.status(500).json({ error: "Internal server error" });
+    serverError(res);
   }
 });
 

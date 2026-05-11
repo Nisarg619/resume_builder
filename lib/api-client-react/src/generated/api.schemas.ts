@@ -57,6 +57,25 @@ export interface Education {
   gpa?: string;
 }
 
+export interface Project {
+  title: string;
+  description: string;
+  link?: string;
+  technologies?: string[];
+}
+
+export interface Certification {
+  name: string;
+  issuer: string;
+  date?: string;
+}
+
+export interface Achievement {
+  title: string;
+  description?: string;
+  date?: string;
+}
+
 export type ResumeDataPersonalInfo = {
   fullName: string;
   email: string;
@@ -82,6 +101,9 @@ export interface ResumeData {
   workExperience?: WorkExperience[];
   education?: Education[];
   skills?: string[];
+  projects?: Project[];
+  certifications?: Certification[];
+  achievements?: Achievement[];
   template?: ResumeDataTemplate;
 }
 

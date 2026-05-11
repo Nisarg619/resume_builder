@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./achievement";
+export * from "./certification";
 export * from "./coverLetter";
 export * from "./coverLetterAIBody";
 export * from "./createCoverLetterBody";
@@ -24,6 +26,7 @@ export * from "./linkedInSummaryBody";
 export * from "./optimizeResumeBody";
 export * from "./optimizeResumeResult";
 export * from "./paymentOrder";
+export * from "./project";
 export * from "./resume";
 export * from "./resumeData";
 export * from "./resumeDataPersonalInfo";

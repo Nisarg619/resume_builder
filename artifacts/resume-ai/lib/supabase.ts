@@ -2,8 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const supabaseUrl = process.env["EXPO_PUBLIC_SUPABASE_URL"]!;
-const supabaseAnonKey = process.env["EXPO_PUBLIC_SUPABASE_ANON_KEY"]!;
+const supabaseUrl = process.env["EXPO_PUBLIC_SUPABASE_URL"] || "https://placeholder.supabase.co";
+const supabaseAnonKey = process.env["EXPO_PUBLIC_SUPABASE_ANON_KEY"] || "placeholder-key";
+
+if (supabaseUrl.includes("placeholder")) {
+  console.warn("Supabase URL is missing. Check your .env file.");
+}
 
 const ExpoSecureStoreAdapter = {
   getItem: (key: string) => {
@@ -45,6 +49,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // On web we need to detect session tokens from OAuth/email-verify redirect URLs
+    detectSessionInUrl: Platform.OS === "web",
   },
 });

@@ -1,12 +1,12 @@
 import type { Request, Response, NextFunction } from "express";
-import { supabase } from "../lib/supabase.js";
+import { supabase, isSupabaseConfigured } from "../lib/supabase.js";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq } from "@workspace/db";
+import { unauthorized, forbidden } from "../lib/responses.js";
 
 export interface AuthenticatedRequest extends Request {
-  userId?: string;
-  userPlan?: string;
+  user: { id: string; plan: "free" | "pro" };
 }
 
 export async function authMiddleware(
@@ -14,36 +14,71 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  // Block dev bypass in production
+  if (process.env["DEV_BYPASS_AUTH"] === "true" && process.env["NODE_ENV"] !== "production") {
+    req.user = { id: "dev-user", plan: "pro" };
+    next();
+    return;
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    res.status(503).json({
+      error:
+        "Auth is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY), or set DEV_BYPASS_AUTH=true for local dev.",
+    });
+    return;
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Missing authorization header" });
+    unauthorized(res, "Missing authorization header");
     return;
   }
 
   const token = authHeader.slice(7);
+  if (!token || token.length < 10) {
+    unauthorized(res, "Invalid token format");
+    return;
+  }
 
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
-      res.status(401).json({ error: "Invalid token" });
+      unauthorized(res, "Invalid or expired token");
       return;
     }
 
     const [dbUser] = await db
-      .select()
+      .select({ 
+        id: usersTable.id, 
+        plan: usersTable.plan,
+        subscriptionExpiresAt: usersTable.subscriptionExpiresAt 
+      })
       .from(usersTable)
       .where(eq(usersTable.id, user.id));
 
     if (!dbUser) {
-      res.status(401).json({ error: "User not found in database" });
+      unauthorized(res, "User not found in database");
       return;
     }
 
-    req.userId = dbUser.id;
-    req.userPlan = dbUser.plan;
+    let currentPlan = dbUser.plan;
+
+    // Automatic Downgrade on Expiry
+    if (currentPlan === "pro" && dbUser.subscriptionExpiresAt && dbUser.subscriptionExpiresAt < new Date()) {
+      await db
+        .update(usersTable)
+        .set({ plan: "free", updatedAt: new Date() })
+        .where(eq(usersTable.id, user.id));
+      currentPlan = "free";
+      req.log?.info?.({ userId: dbUser.id }, "User subscription expired, downgraded to free");
+    }
+
+    req.user = { id: dbUser.id, plan: currentPlan as "free" | "pro" };
     next();
   } catch (err) {
-    res.status(401).json({ error: "Authentication failed" });
+    req.log?.error?.({ err }, "Auth middleware error");
+    unauthorized(res, "Authentication failed");
   }
 }
 
@@ -52,8 +87,8 @@ export function requirePro(
   res: Response,
   next: NextFunction
 ): void {
-  if (req.userPlan !== "pro") {
-    res.status(403).json({ error: "Pro subscription required", code: "PRO_REQUIRED" });
+  if (req.user?.plan !== "pro") {
+    forbidden(res, "Pro subscription required", "PRO_REQUIRED");
     return;
   }
   next();

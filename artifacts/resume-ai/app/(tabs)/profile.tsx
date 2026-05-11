@@ -17,6 +17,19 @@ import { Card } from "@/components/Card";
 import { ProBadge } from "@/components/ProBadge";
 import { PremiumModal } from "@/components/PremiumModal";
 import { StyledButton } from "@/components/StyledButton";
+import { getApiBaseUrl } from "@/lib/baseUrl";
+import { useQueryClient } from "@tanstack/react-query";
+import Animated, { 
+  FadeInUp, 
+  FadeInDown,
+  withRepeat,
+  withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  useEffect
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -26,6 +39,25 @@ export default function ProfileScreen() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [savingName, setSavingName] = useState(false);
+  const qc = useQueryClient();
+
+  const glowOpacity = useSharedValue(0.4);
+
+  useEffect(() => {
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.8, { duration: 2000 }),
+        withTiming(0.4, { duration: 2000 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedGlowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+    shadowOpacity: glowOpacity.value,
+  }));
 
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? 67 : insets.top;
@@ -34,7 +66,7 @@ export default function ProfileScreen() {
   const handleSignOut = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: signOut },
+      { text: "Sign Out", style: "destructive", onPress: async () => { await signOut(); qc.clear(); } },
     ]);
   };
 
@@ -50,8 +82,7 @@ export default function ProfileScreen() {
     }
     setSavingName(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const base = domain ? `https://${domain}` : "";
+      const base = getApiBaseUrl();
       const { supabase } = await import("@/lib/supabase");
       const { data } = await supabase.auth.getSession();
       const res = await fetch(`${base}/api/users/me`, {
@@ -85,80 +116,98 @@ export default function ProfileScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad + 90 }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.screenTitle, { color: colors.foreground }]}>Profile</Text>
+      <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+        <Text style={[styles.screenTitle, { color: colors.foreground }]}>Profile</Text>
+      </Animated.View>
 
-      <Card elevated style={{ alignItems: "center", gap: 12, paddingVertical: 28 }}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
-        <View style={{ alignItems: "center", gap: 4 }}>
-          {editingName ? (
-            <View style={styles.nameEditRow}>
-              <TextInput
-                value={nameInput}
-                onChangeText={setNameInput}
-                style={[styles.nameInput, { borderColor: colors.input, color: colors.foreground, backgroundColor: colors.background, borderRadius: colors.radius - 4 }]}
-                placeholder="Your full name"
-                placeholderTextColor={colors.mutedForeground}
-                autoCapitalize="words"
-                autoFocus
-              />
-              <TouchableOpacity onPress={handleSaveName} disabled={savingName} style={[styles.nameActionBtn, { backgroundColor: colors.primary, borderRadius: colors.radius - 4 }]}>
-                <Text style={styles.nameActionBtnText}>{savingName ? "..." : "Save"}</Text>
+      <Animated.View entering={FadeInUp.delay(200).duration(600)}>
+        <Card elevated style={{ alignItems: "center", gap: 12, paddingVertical: 28 }}>
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={{ alignItems: "center", gap: 4 }}>
+            {editingName ? (
+              <View style={styles.nameEditRow}>
+                <TextInput
+                  value={nameInput}
+                  onChangeText={setNameInput}
+                  style={[styles.nameInput, { borderColor: colors.input, color: colors.foreground, backgroundColor: colors.background, borderRadius: colors.radius - 4 }]}
+                  placeholder="Your full name"
+                  placeholderTextColor={colors.mutedForeground}
+                  autoCapitalize="words"
+                  autoFocus
+                />
+                <TouchableOpacity onPress={handleSaveName} disabled={savingName} style={[styles.nameActionBtn, { backgroundColor: colors.primary, borderRadius: colors.radius - 4 }]}>
+                  <Text style={styles.nameActionBtnText}>{savingName ? "..." : "Save"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setEditingName(false)} style={[styles.nameActionBtn, { backgroundColor: colors.muted, borderRadius: colors.radius - 4 }]}>
+                  <Text style={[styles.nameActionBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={handleEditName} style={styles.nameRow} accessibilityRole="button" accessibilityHint="Edit name">
+                <Text style={[styles.userName, { color: colors.foreground }]}>
+                  {profile?.name || "Tap to set name"}
+                </Text>
+                <Feather name="edit-2" size={14} color={colors.mutedForeground} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEditingName(false)} style={[styles.nameActionBtn, { backgroundColor: colors.muted, borderRadius: colors.radius - 4 }]}>
-                <Text style={[styles.nameActionBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity onPress={handleEditName} style={styles.nameRow}>
-              <Text style={[styles.userName, { color: colors.foreground }]}>
-                {profile?.name || "Tap to set name"}
-              </Text>
-              <Feather name="edit-2" size={14} color={colors.mutedForeground} style={{ marginLeft: 6 }} />
-            </TouchableOpacity>
-          )}
-          <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>{profile?.email}</Text>
-          {profile?.plan === "pro" ? (
-            <ProBadge />
-          ) : (
-            <View style={[styles.freeBadge, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.freeBadgeText, { color: colors.mutedForeground }]}>Free Plan</Text>
-            </View>
-          )}
-        </View>
-      </Card>
+            )}
+            <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>{profile?.email}</Text>
+            {profile?.plan === "pro" ? (
+              <ProBadge />
+            ) : (
+              <View style={[styles.freeBadge, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.freeBadgeText, { color: colors.mutedForeground }]}>Free Plan</Text>
+              </View>
+            )}
+          </View>
+        </Card>
+      </Animated.View>
 
       {profile?.plan === "free" && (
-        <TouchableOpacity
-          style={[styles.upgradeCard, { backgroundColor: colors.accent, borderRadius: colors.radius }]}
-          onPress={() => setProModalVisible(true)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.upgradeCardContent}>
-            <Feather name="zap" size={24} color="#fff" />
-            <View>
-              <Text style={styles.upgradeCardTitle}>Upgrade to Pro</Text>
-              <Text style={styles.upgradeCardSub}>₹99/mo or ₹699/yr</Text>
-            </View>
-          </View>
-          <Feather name="chevron-right" size={20} color="#fff" />
-        </TouchableOpacity>
+        <Animated.View entering={FadeInUp.delay(300).duration(600)} style={[styles.upgradeWrapper, animatedGlowStyle, { shadowColor: colors.pro }]}>
+          <TouchableOpacity
+            onPress={() => setProModalVisible(true)}
+            activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Upgrade to Pro"
+          >
+            <LinearGradient
+              colors={[colors.accent, "#EA580C"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.upgradeCard, { borderRadius: colors.radius }]}
+            >
+              <View style={styles.upgradeCardContent}>
+                <View style={styles.upgradeIconWrap}>
+                  <Feather name="zap" size={24} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.upgradeCardTitle}>Upgrade to Pro</Text>
+                  <Text style={styles.upgradeCardSub}>₹99/mo or ₹699/yr</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={20} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
       {profile?.subscriptionExpiresAt && (
-        <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Feather name="calendar" size={20} color={colors.primary} />
-          <View>
-            <Text style={[styles.menuLabel, { color: colors.foreground }]}>Pro expires</Text>
-            <Text style={[styles.menuSub, { color: colors.mutedForeground }]}>
-              {new Date(profile.subscriptionExpiresAt).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
-            </Text>
-          </View>
-        </Card>
+        <Animated.View entering={FadeInUp.delay(350)}>
+          <Card style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Feather name="calendar" size={20} color={colors.primary} />
+            <View>
+              <Text style={[styles.menuLabel, { color: colors.foreground }]}>Pro expires</Text>
+              <Text style={[styles.menuSub, { color: colors.mutedForeground }]}>
+                {new Date(profile.subscriptionExpiresAt).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
+              </Text>
+            </View>
+          </Card>
+        </Animated.View>
       )}
 
-      <View style={[styles.menuSection, { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border }]}>
+      <Animated.View entering={FadeInUp.delay(400)} style={[styles.menuSection, { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border }]}>
         {[
           { icon: "file-text" as const, label: "Total Resumes", value: String(profile?.usageResumeCount || 0) },
           { icon: "mail" as const, label: "Total Cover Letters", value: String(profile?.usageCoverLetterCount || 0) },
@@ -174,16 +223,20 @@ export default function ProfileScreen() {
             <Text style={[styles.menuValue, { color: colors.primary }]}>{item.value}</Text>
           </View>
         ))}
-      </View>
+      </Animated.View>
 
-      <TouchableOpacity
-        style={[styles.signOutBtn, { borderColor: colors.destructive, borderRadius: colors.radius }]}
-        onPress={handleSignOut}
-        activeOpacity={0.8}
-      >
-        <Feather name="log-out" size={18} color={colors.destructive} />
-        <Text style={[styles.signOutText, { color: colors.destructive }]}>Sign Out</Text>
-      </TouchableOpacity>
+      <Animated.View entering={FadeInUp.delay(500)}>
+        <TouchableOpacity
+          style={[styles.signOutBtn, { borderColor: colors.destructive, borderRadius: colors.radius }]}
+          onPress={handleSignOut}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+        >
+          <Feather name="log-out" size={18} color={colors.destructive} />
+          <Text style={[styles.signOutText, { color: colors.destructive }]}>Sign Out</Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       <PremiumModal
         visible={proModalVisible}
@@ -215,10 +268,16 @@ const styles = StyleSheet.create({
   userEmail: { fontSize: 14, fontFamily: "Inter_400Regular" },
   freeBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   freeBadgeText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  upgradeCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 18 },
+  upgradeWrapper: {
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  upgradeCard: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20 },
   upgradeCardContent: { flexDirection: "row", alignItems: "center", gap: 14 },
-  upgradeCardTitle: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
-  upgradeCardSub: { color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "Inter_400Regular" },
+  upgradeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  upgradeCardTitle: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" },
+  upgradeCardSub: { color: "rgba(255,255,255,0.85)", fontSize: 14, fontFamily: "Inter_400Regular" },
   menuSection: { borderWidth: 1 },
   menuRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
   menuLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -228,3 +287,4 @@ const styles = StyleSheet.create({
   signOutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, padding: 14, borderWidth: 1.5 },
   signOutText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });
+
