@@ -47,3 +47,17 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Environment variables & Secrets
+.env
+.env.*
+!.env.example
+secrets.json
+*.pem
+*.key
+
+# Local/IDE
+.vscode/
+.idea/
+*.swp
+*.log
