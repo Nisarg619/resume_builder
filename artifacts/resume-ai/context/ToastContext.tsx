@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(-150);
   const opacity = useSharedValue(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<any>(null);
 
   const hideToast = useCallback(() => {
     translateY.value = withTiming(-150, { duration: 300 });

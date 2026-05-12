@@ -96,9 +96,9 @@ export function StyledButton({
   };
 
   const isGradient = variant === "primary" || variant === "pro";
-  const gradientColors = variant === "pro" 
+  const gradientColors = (variant === "pro" 
     ? [colors.accent, "#EA580C"] 
-    : [colors.primary, colors.tint];
+    : [colors.primary, colors.tint]) as [string, string];
 
   const content = (
     <>

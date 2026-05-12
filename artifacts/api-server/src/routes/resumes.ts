@@ -2,12 +2,11 @@ import { Router } from "express";
 import { authMiddleware, type AuthenticatedRequest } from "../middlewares/auth.js";
 import { db } from "@workspace/db";
 import { resumesTable, usersTable } from "@workspace/db/schema";
-import { eq, and, desc } from "@workspace/db";
+import { eq, and, desc, sql } from "@workspace/db";
 import {
   success, created, noContent, badRequest, notFound, forbidden, serverError,
   requireFields, serializeResume,
 } from "../lib/responses.js";
-import { sql } from "drizzle-orm";
 
 const router = Router();
 

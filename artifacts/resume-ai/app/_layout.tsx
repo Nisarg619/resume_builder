@@ -43,7 +43,7 @@ function RootLayoutNav() {
     if (!navState?.key || loading) return;
     const inAuthGroup = segments[0] === "(auth)";
     const inDashboardGroup = segments[0] === "(dashboard)";
-    const inLandingGroup = segments[0] === "(landing)" || segments.length === 0;
+    const inLandingGroup = segments[0] === "(landing)" || (segments as string[]).length === 0;
 
     if (!session) {
       if (inDashboardGroup) {

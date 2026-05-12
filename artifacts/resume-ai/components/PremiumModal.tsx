@@ -92,7 +92,7 @@ export function PremiumModal({ visible, onClose, onSuccess }: PremiumModalProps)
           email: data.session?.user.email,
         },
         theme: { color: colors.primary },
-      });
+      } as any);
 
       const verifyRes = await fetch(`${base}/api/payments/verify`, {
         method: "POST",

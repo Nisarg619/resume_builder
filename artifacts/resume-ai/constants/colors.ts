@@ -24,6 +24,7 @@ const colors = {
     proLight: "#FFEDD5",
     glassBorder: "rgba(255, 255, 255, 0.4)",
     glassBg: "rgba(255, 255, 255, 0.6)",
+    selection: "rgba(79, 70, 229, 0.1)",
   },
   dark: {
     text: "#F8FAFC",
@@ -50,6 +51,7 @@ const colors = {
     proLight: "rgba(249, 115, 22, 0.15)",
     glassBorder: "rgba(255, 255, 255, 0.08)",
     glassBg: "rgba(15, 23, 42, 0.4)",
+    selection: "rgba(99, 102, 241, 0.2)",
   },
   radius: 16,
 };

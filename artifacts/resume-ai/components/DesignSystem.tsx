@@ -66,17 +66,32 @@ export const StartupButton = ({
   title, 
   onPress, 
   variant = "primary",
+  icon,
   style 
 }: { 
   title: string; 
   onPress: () => void; 
   variant?: "primary" | "secondary" | "outline";
+  icon?: React.ReactNode;
   style?: ViewStyle;
 }) => {
   const colors = useColors();
   
   const isPrimary = variant === "primary";
   const isOutline = variant === "outline";
+  
+  const content = (
+    <View style={styles.buttonContent}>
+      {icon && <View style={styles.buttonIcon}>{icon}</View>}
+      <Text style={[
+        styles.buttonText, 
+        isPrimary && styles.buttonTextPrimary,
+        !isPrimary && { color: colors.foreground }
+      ]}>
+        {title}
+      </Text>
+    </View>
+  );
   
   return (
     <TouchableOpacity 
@@ -96,10 +111,10 @@ export const StartupButton = ({
           end={{ x: 1, y: 0 }}
           style={[styles.gradient, { borderRadius: colors.radius }]}
         >
-          <Text style={styles.buttonTextPrimary}>{title}</Text>
+          {content}
         </LinearGradient>
       ) : (
-        <Text style={[styles.buttonText, { color: colors.foreground }]}>{title}</Text>
+        content
       )}
     </TouchableOpacity>
   );
@@ -148,5 +163,13 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
+  },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buttonIcon: {
+    marginRight: 8,
   }
 });
