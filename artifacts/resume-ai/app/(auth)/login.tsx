@@ -20,7 +20,6 @@ export default function LoginScreen() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } = useAuth();
   const { showToast } = useToast();
 
-  console.log("[LoginScreen] Rendered", { hasAuth: !!signInWithEmail, hasToast: !!showToast });
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,7 +58,6 @@ export default function LoginScreen() {
     if (password.length < 6) { showToast({ title: "Weak Password", message: "Password must be at least 6 characters.", type: "error" }); return; }
 
     setLoading(true);
-    console.log("[LoginScreen] Starting auth...", { mode, email });
     try {
       if (mode === "signup") {
         await signUpWithEmail(email.trim(), password, name.trim());
@@ -69,11 +67,9 @@ export default function LoginScreen() {
         setPassword("");
       } else {
         await signInWithEmail(email.trim(), password);
-        console.log("[LoginScreen] Sign-in successful");
       }
     } catch (err: unknown) {
       const message = (err as Error).message;
-      console.error("[LoginScreen] Auth Error:", message);
       showToast({ title: "Authentication Error", message, type: "error" });
     } finally { 
       setLoading(false); 

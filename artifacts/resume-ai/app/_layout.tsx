@@ -20,6 +20,7 @@ import { ResumeProvider } from "@/context/ResumeContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { setupApi } from "@/lib/api";
 import { useColors } from "@/hooks/useColors";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,11 +42,17 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!navState?.key || loading) return;
     const inAuthGroup = segments[0] === "(auth)";
+    const inDashboardGroup = segments[0] === "(dashboard)";
+    const inLandingGroup = segments[0] === "(landing)" || segments.length === 0;
 
-    if (!session && !inAuthGroup) {
-      router.replace("/(auth)/login");
-    } else if (session && inAuthGroup) {
-      router.replace("/(tabs)");
+    if (!session) {
+      if (inDashboardGroup) {
+        router.replace("/(auth)/login");
+      }
+    } else {
+      if (inAuthGroup || inLandingGroup) {
+        router.replace("/(dashboard)/dashboard-home");
+      }
     }
   }, [session, loading, segments, navState?.key]);
 
@@ -60,14 +67,9 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(landing)" />
       <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="resume-builder" options={{ presentation: "modal" }} />
-      <Stack.Screen name="cover-letter" options={{ presentation: "modal" }} />
-      <Stack.Screen name="optimizer" options={{ presentation: "modal" }} />
-      <Stack.Screen name="interview-prep" options={{ presentation: "modal" }} />
-      <Stack.Screen name="upload-resume" options={{ presentation: "modal" }} />
-      <Stack.Screen name="ats-analyzer" options={{ presentation: "modal" }} />
+      <Stack.Screen name="(dashboard)" />
     </Stack>
   );
 }
@@ -89,22 +91,24 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <ResumeProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <ToastProvider>
-                    <RootLayoutNav />
-                  </ToastProvider>
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </ResumeProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <ResumeProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <ToastProvider>
+                      <RootLayoutNav />
+                    </ToastProvider>
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </ResumeProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }

@@ -185,17 +185,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     if (Platform.OS === "web") {
-      const redirectTo = getWebRedirectUrl();
+      const redirectTo = window.location.origin;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo, skipBrowserRedirect: false },
+        options: { 
+          redirectTo,
+          skipBrowserRedirect: false,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          }
+        },
       });
       if (error) throw new Error(mapAuthError(error));
       if (data?.url) {
-        window.location.href = data.url;
+        window.location.assign(data.url);
       }
     } else {
-      const redirectTo = Linking.createURL("/");
+      const redirectTo = Linking.createURL("/(auth)/callback");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo },
@@ -204,16 +211,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.url) {
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
         if (result.type === "success" && result.url) {
-          try {
-            const url = new URL(result.url);
-            const code = url.searchParams.get("code");
-            if (code) {
-              const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-              if (exchangeError) throw new Error(mapAuthError(exchangeError));
-            }
-          } catch (e) {
-            console.error("URL parsing error", e);
-          }
+          const { error: exchangeError } = await supabase.auth.setSession({
+            access_token: result.url.split("access_token=")[1]?.split("&")[0] || "",
+            refresh_token: result.url.split("refresh_token=")[1]?.split("&")[0] || "",
+          });
+          if (exchangeError) throw new Error(mapAuthError(exchangeError));
         }
       }
     }

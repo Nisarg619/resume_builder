@@ -5,7 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "dev": "expo start",
-    "dev:local": "cross-env EXPO_PUBLIC_DOMAIN=localhost:3001 expo start --web --port 8082 --clear",
+    "dev:local": "cross-env EXPO_PUBLIC_DOMAIN=localhost:3001 expo start --web --port 8082",
     "build": "expo export",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
